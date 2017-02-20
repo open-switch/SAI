@@ -188,7 +188,7 @@ typedef enum _sai_tunnel_encap_ecn_mode_t
 
     /** User defined behavior */
     SAI_TUNNEL_ENCAP_ECN_MODE_USER_DEFINED
-    
+
 } sai_tunnel_encap_ecn_mode_t;
 
 typedef enum _sai_tunnel_decap_ecn_mode_t
@@ -198,10 +198,10 @@ typedef enum _sai_tunnel_decap_ecn_mode_t
 
     /** Copy from outer ECN */
     SAI_TUNNEL_DECAP_ECN_MODE_COPY_FROM_OUTER,
-    
+
     /** User defined behavior */
     SAI_TUNNEL_DECAP_ECN_MODE_USER_DEFINED
-    
+
 } sai_tunnel_decap_ecn_mode_t;
 
 typedef enum _sai_tunnel_attr_t
@@ -223,7 +223,7 @@ typedef enum _sai_tunnel_attr_t
     SAI_TUNNEL_ATTR_ENCAP_SRC_IP,
 
     /** tunnel TTL mode (pipe or uniform model) [sai_tunnel_ttl_mode_t]
-     *  (CREATE_ONLY) 
+     *  (CREATE_ONLY)
      *  Default would be SAI_TUNNEL_TTL_UNIFORM_MODEL */
     SAI_TUNNEL_ATTR_ENCAP_TTL_MODE,
 

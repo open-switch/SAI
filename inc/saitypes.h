@@ -1,30 +1,26 @@
-/*
-* Copyright (c) 2014 Microsoft Open Technologies, Inc.
-*
-*    Licensed under the Apache License, Version 2.0 (the "License"); you may
-*    not use this file except in compliance with the License. You may obtain
-*    a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
-*
-*    THIS CODE IS PROVIDED ON AN  *AS IS* BASIS, WITHOUT WARRANTIES OR
-*    CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT
-*    LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS
-*    FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
-*
-*    See the Apache Version 2.0 License for specific language governing
-*    permissions and limitations under the License.
-*
-*    Microsoft would like to thank the following companies for their review and
-*    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
-*    Dell Products, L.P., Facebook, Inc
-*
-* Module Name:
-*
-*    saitypes.h
-*
-* Abstract:
-*
-*    This module contains SAI portable types.
-*/
+/**
+ * Copyright (c) 2014 Microsoft Open Technologies, Inc.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *    not use this file except in compliance with the License. You may obtain
+ *    a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR
+ *    CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT
+ *    LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS
+ *    FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
+ *
+ *    See the Apache Version 2.0 License for specific language governing
+ *    permissions and limitations under the License.
+ *
+ *    Microsoft would like to thank the following companies for their review and
+ *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
+ *    Dell Products, L.P., Facebook, Inc
+ *
+ * @file    saitypes.h
+ *
+ * @brief   This module defines SAI portable types
+ */
 
 #if !defined (__SAITYPES_H_)
 #define __SAITYPES_H_
@@ -118,6 +114,10 @@ typedef int8_t sai_int8_t;
 typedef size_t sai_size_t;
 typedef uint64_t sai_object_id_t;
 
+/**
+ * @def SAI_NULL_OBJECT_ID
+ * Sai NULL object ID
+ */
 #define SAI_NULL_OBJECT_ID 0L
 
 /**
@@ -156,50 +156,51 @@ typedef enum _sai_common_api_t {
  * @brief sai object type
  */
 typedef enum _sai_object_type_t {
-    SAI_OBJECT_TYPE_NULL             =  0,
-    SAI_OBJECT_TYPE_PORT             =  1,
-    SAI_OBJECT_TYPE_LAG              =  2,
-    SAI_OBJECT_TYPE_VIRTUAL_ROUTER   =  3,
-    SAI_OBJECT_TYPE_NEXT_HOP         =  4,
-    SAI_OBJECT_TYPE_NEXT_HOP_GROUP   =  5,
-    SAI_OBJECT_TYPE_ROUTER_INTERFACE =  6,
-    SAI_OBJECT_TYPE_ACL_TABLE        =  7,
-    SAI_OBJECT_TYPE_ACL_ENTRY        =  8,
-    SAI_OBJECT_TYPE_ACL_COUNTER      =  9,
-    SAI_OBJECT_TYPE_ACL_RANGE        = 10,
-    SAI_OBJECT_TYPE_HOST_INTERFACE   = 11,
-    SAI_OBJECT_TYPE_MIRROR           = 12,
-    SAI_OBJECT_TYPE_SAMPLEPACKET     = 13,
-    SAI_OBJECT_TYPE_STP_INSTANCE     = 14,
-    SAI_OBJECT_TYPE_TRAP_GROUP       = 15,
-    SAI_OBJECT_TYPE_ACL_TABLE_GROUP  = 16,
-    SAI_OBJECT_TYPE_POLICER          = 17,
-    SAI_OBJECT_TYPE_WRED             = 18,
-    SAI_OBJECT_TYPE_QOS_MAPS         = 19,
-    SAI_OBJECT_TYPE_QUEUE            = 20,
-    SAI_OBJECT_TYPE_SCHEDULER        = 21,
-    SAI_OBJECT_TYPE_SCHEDULER_GROUP  = 22,
-    SAI_OBJECT_TYPE_BUFFER_POOL      = 23,
-    SAI_OBJECT_TYPE_BUFFER_PROFILE   = 24,
-    SAI_OBJECT_TYPE_PRIORITY_GROUP   = 25,
-    SAI_OBJECT_TYPE_LAG_MEMBER       = 26,
-    SAI_OBJECT_TYPE_HASH             = 27,
-    SAI_OBJECT_TYPE_UDF              = 28,
-    SAI_OBJECT_TYPE_UDF_MATCH        = 29,
-    SAI_OBJECT_TYPE_UDF_GROUP        = 30,
-    SAI_OBJECT_TYPE_FDB              = 31,
-    SAI_OBJECT_TYPE_SWITCH           = 32,
-    SAI_OBJECT_TYPE_TRAP             = 33,
-    SAI_OBJECT_TYPE_TRAP_USER_DEF    = 34,
-    SAI_OBJECT_TYPE_NEIGHBOR         = 35,
-    SAI_OBJECT_TYPE_ROUTE            = 36,
-    SAI_OBJECT_TYPE_VLAN             = 37,
-    SAI_OBJECT_TYPE_VLAN_MEMBER      = 38,
-    SAI_OBJECT_TYPE_PACKET           = 39,
-    SAI_OBJECT_TYPE_TUNNEL_MAP       = 40,
-    SAI_OBJECT_TYPE_TUNNEL           = 41,
-    SAI_OBJECT_TYPE_TUNNEL_TABLE_ENTRY = 42,
-    SAI_OBJECT_TYPE_MAX              = 43
+    SAI_OBJECT_TYPE_NULL                     =  0, /**< invalid object type */
+    SAI_OBJECT_TYPE_PORT                     =  1,
+    SAI_OBJECT_TYPE_LAG                      =  2,
+    SAI_OBJECT_TYPE_VIRTUAL_ROUTER           =  3,
+    SAI_OBJECT_TYPE_NEXT_HOP                 =  4,
+    SAI_OBJECT_TYPE_NEXT_HOP_GROUP           =  5,
+    SAI_OBJECT_TYPE_ROUTER_INTERFACE         =  6,
+    SAI_OBJECT_TYPE_ACL_TABLE                =  7,
+    SAI_OBJECT_TYPE_ACL_ENTRY                =  8,
+    SAI_OBJECT_TYPE_ACL_COUNTER              =  9,
+    SAI_OBJECT_TYPE_ACL_RANGE                = 10,
+    SAI_OBJECT_TYPE_HOSTIF                   = 11,
+    SAI_OBJECT_TYPE_MIRROR_SESSION           = 12,
+    SAI_OBJECT_TYPE_SAMPLEPACKET             = 13,
+    SAI_OBJECT_TYPE_STP                      = 14,
+    SAI_OBJECT_TYPE_HOSTIF_TRAP_GROUP        = 15,
+    SAI_OBJECT_TYPE_ACL_TABLE_GROUP          = 16,
+    SAI_OBJECT_TYPE_POLICER                  = 17,
+    SAI_OBJECT_TYPE_WRED                     = 18,
+    SAI_OBJECT_TYPE_QOS_MAP                  = 19,
+    SAI_OBJECT_TYPE_QUEUE                    = 20,
+    SAI_OBJECT_TYPE_SCHEDULER                = 21,
+    SAI_OBJECT_TYPE_SCHEDULER_GROUP          = 22,
+    SAI_OBJECT_TYPE_BUFFER_POOL              = 23,
+    SAI_OBJECT_TYPE_BUFFER_PROFILE           = 24,
+    SAI_OBJECT_TYPE_INGRESS_PRIORITY_GROUP   = 25,
+    SAI_OBJECT_TYPE_LAG_MEMBER               = 26,
+    SAI_OBJECT_TYPE_HASH                     = 27,
+    SAI_OBJECT_TYPE_UDF                      = 28,
+    SAI_OBJECT_TYPE_UDF_MATCH                = 29,
+    SAI_OBJECT_TYPE_UDF_GROUP                = 30,
+    SAI_OBJECT_TYPE_FDB_ENTRY                = 31,
+    SAI_OBJECT_TYPE_SWITCH                   = 32,
+    SAI_OBJECT_TYPE_HOSTIF_TRAP              = 33,
+    SAI_OBJECT_TYPE_HOSTIF_USER_DEFINED_TRAP = 34,
+    SAI_OBJECT_TYPE_NEIGHBOR_ENTRY           = 35,
+    SAI_OBJECT_TYPE_ROUTE_ENTRY              = 36,
+    SAI_OBJECT_TYPE_VLAN                     = 37,
+    SAI_OBJECT_TYPE_VLAN_MEMBER              = 38,
+    SAI_OBJECT_TYPE_HOSTIF_PACKET            = 39,
+    SAI_OBJECT_TYPE_TUNNEL_MAP               = 40,
+    SAI_OBJECT_TYPE_TUNNEL                   = 41,
+    SAI_OBJECT_TYPE_TUNNEL_TERM_TABLE_ENTRY  = 42,
+    SAI_OBJECT_TYPE_FDB_FLUSH                = 43,
+    SAI_OBJECT_TYPE_MAX                      = 44
 } sai_object_type_t;
 
 typedef struct _sai_u8_list_t {
@@ -255,6 +256,21 @@ typedef struct _sai_vlan_list_t {
     sai_vlan_id_t *list;
 
 } sai_vlan_list_t;
+
+typedef struct _sai_vlan_port_t sai_vlan_port_t;
+
+/**
+ * @brief Defines a vlan port list datastructure
+ */
+typedef struct _sai_vlan_port_list_t {
+
+    /** Number of ports in a VLAN */
+    uint32_t count;
+
+    /** List of ports in a VLAN */
+    sai_vlan_port_t *list;
+
+} sai_vlan_port_list_t;
 
 typedef enum _sai_ip_addr_family_t {
     SAI_IP_ADDR_FAMILY_IPV4,
@@ -397,10 +413,19 @@ typedef struct _sai_port_breakout_t
 
 typedef enum _sai_packet_color_t
 {
+    /**
+     * @brief Color Green
+     */
     SAI_PACKET_COLOR_GREEN,
 
+    /**
+     * @brief Color Yellow
+     */
     SAI_PACKET_COLOR_YELLOW,
 
+    /**
+     * @brief Color Red
+     */
     SAI_PACKET_COLOR_RED,
 
 } sai_packet_color_t;
@@ -464,7 +489,7 @@ typedef struct _sai_tunnel_map_params_t
 {
     /** inner ECN */
     sai_uint8_t oecn;
-    
+
     /** outer ECN */
     sai_uint8_t uecn;
 
@@ -495,25 +520,31 @@ typedef struct _sai_tunnel_map_list_t
 } sai_tunnel_map_list_t;
 
 /**
- *  @brief Structure for acl attributes supported at each stage.
- *  action_list alone is added now. Qualifier list can also be added 
- *  when needed.
+ * @brief Structure for acl attributes supported at each stage.
+ * action_list alone is added now. Qualifier list can also be added
+ * when needed.
  */
 typedef struct _sai_acl_capability_t
 {
-    /* Type of acl stage. Input to get the action list
-     * Failure to pass the stage as input will be treated as error */
-    sai_int32_t  stage;
-
-    /* Output from get function.
-     * boolean indicating whether action list is mandatory for table creation */
-    bool  is_action_list_mandatory;
-
-    /* Output from get function.
-     * List of actions supported per stage from the sai_acl_table_action_list_t.
-     * Max action list can be obtained using the SAI_SWITCH_ATTR_MAX_ACL_ACTION_COUNT
+    /**
+     * @brief Type of acl stage. Input to get the action list
+     * Failure to pass the stage as input will be treated as error
      */
-    sai_s32_list_t  action_list;
+    sai_int32_t stage;
+
+    /**
+     * @brief Output from get function.
+     * boolean indicating whether action list is mandatory for table creation
+     */
+    bool is_action_list_mandatory;
+
+    /**
+     * @brief Output from get function.
+     *
+     * List of actions supported per stage from the sai_acl_table_action_list_t.
+     * Max action list can be obtained using the #SAI_SWITCH_ATTR_MAX_ACL_ACTION_COUNT
+     */
+    sai_s32_list_t action_list;
 }sai_acl_capability_t;
 
 /**
@@ -546,12 +577,12 @@ typedef union {
     sai_u32_range_t u32range;
     sai_s32_range_t s32range;
     sai_vlan_list_t vlanlist;
+    sai_vlan_port_list_t vlanportlist;
     sai_acl_field_data_t aclfield;
     sai_acl_action_data_t aclaction;
     sai_port_breakout_t portbreakout;
     sai_qos_map_list_t qosmap;
     sai_tunnel_map_list_t tunnelmap;
-    sai_acl_capability_t aclcapability; 
 
 } sai_attribute_value_t;
 
