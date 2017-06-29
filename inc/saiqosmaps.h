@@ -69,7 +69,14 @@ typedef enum _sai_qos_map_type_t
     SAI_QOS_MAP_TYPE_PFC_PRIORITY_TO_QUEUE = 0x00000009,
 
     /** Custom range base value */
-    SAI_QOS_MAP_TYPE_CUSTOM_RANGE_BASE = 0x10000000
+    SAI_QOS_MAP_TYPE_CUSTOM_RANGE_BASE = 0x10000000,
+
+    /** @TODO - Rmeove this */
+    /** Qos Map to set DOT1P to traffic class and color*/
+    SAI_QOS_MAP_TYPE_DOT1P_TO_TC_AND_COLOR = 0x0000000a,
+
+    /** Qos Map to set DSCP to traffic class and color*/
+    SAI_QOS_MAP_TYPE_DSCP_TO_TC_AND_COLOR = 0x0000000b,
 
 } sai_qos_map_type_t;
 

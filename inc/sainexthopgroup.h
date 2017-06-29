@@ -192,6 +192,7 @@ typedef sai_status_t (*sai_get_next_hop_group_attribute_fn)(
  * @brief Create next hop group member
  *
  * @param[out] next_hop_group_member_id - next hop group member id
+ * @param[in] switch_id Switch id
  * @param[in] attr_count - number of attributes
  * @param[in] attr_list - array of attributes
  *

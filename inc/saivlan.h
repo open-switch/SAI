@@ -109,7 +109,7 @@ typedef enum _sai_vlan_attr_t
     /**
      * @brief STP Instance that the VLAN is associated to
      *
-     * Ddefault to default stp instance id
+     * Default to default stp instance id
      *
      * @type sai_object_id_t
      * @objects SAI_OBJECT_TYPE_STP

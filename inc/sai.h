@@ -76,7 +76,8 @@
  */
 typedef enum _sai_api_t
 {
-    SAI_API_UNSPECIFIED      =  0, /**< unspecified api */
+    SAI_API_START            =  0, /**< start */
+    SAI_API_UNSPECIFIED      =  SAI_API_START, /**< unspecified api */
     SAI_API_SWITCH           =  1, /**< sai_switch_api_t */
     SAI_API_PORT             =  2, /**< sai_port_api_t */
     SAI_API_FDB              =  3, /**< sai_fdb_api_t */
@@ -109,6 +110,12 @@ typedef enum _sai_api_t
     SAI_API_L2MC_GROUP       = 30, /**< sai_l2mc_group_api_t */
     SAI_API_IPMC_GROUP       = 31, /**< sai_ipmc_group_api_t */
     SAI_API_MCAST_FDB        = 32, /**< sai_mcast_fdb_api_t */
+    SAI_API_END,
+    SAI_API_CUSTOM_RANGE_START = 0x1000,
+    /** Extension module provided by Dell Inc. SAI implementation */
+    SAI_API_FC_SWITCH = SAI_API_CUSTOM_RANGE_START,
+    SAI_API_FC_PORT,
+    SAI_API_CUSTOM_RANGE_END,
 } sai_api_t;
 
 /**
