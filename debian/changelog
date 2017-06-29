@@ -1,0 +1,16 @@
+opx-sai-api (26.1.0) unstable; urgency=medium
+
+  * Update: SAI 1.0 changes
+  * Update: SAI 0.9.6 changes
+  * Feature: SAI FC Module API support
+  * Bugfix: Miscellaneous Bugfixes
+  * Cleanup: Miscellaneous Cleanup
+                     
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Fri, 16 Jun 2017 11:45:33 -0800
+
+
+opx-sai-api (1.0.1) unstable; urgency=medium
+
+  * Initial release.
+
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Wed, 01 Feb 2017 09:45:33 -0800

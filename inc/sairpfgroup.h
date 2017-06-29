@@ -164,7 +164,7 @@ typedef sai_status_t (*sai_get_rpf_group_attribute_fn)(
  * @brief Create RPF interface group member
  *
  * @param[out] rpf_group_member_id - RPF interface group member id
- * @param[in] switch_id Switch id
+ * @param[in] switch_id Switch Object id
  * @param[in] attr_count - number of attributes
  * @param[in] attr_list - array of attributes
  *

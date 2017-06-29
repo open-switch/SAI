@@ -196,7 +196,6 @@ typedef sai_status_t (*sai_create_stp_port_fn)(
     _In_ uint32_t attr_count,
     _In_ const sai_attribute_t *attr_list);
 
-
 /**
  * @brief Remove stp port object.
  *
