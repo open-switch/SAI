@@ -7,10 +7,5 @@ include_HEADERS=inc/sai.h inc/saiacl.h  inc/saibuffer.h  inc/saifcport.h inc/sai
                 inc/saiobject.h inc/saipolicer.h  inc/saiport.h  inc/saiqosmaps.h  inc/saiqueue.h  \
                 inc/sairoute.h  inc/sairouter.h inc/sairouterintf.h  inc/sairpfgroup.h inc/saisamplepacket.h  \
                 inc/saischeduler.h  inc/saischedulergroup.h  inc/saistatus.h \
-                inc/saistp.h inc/saiswitch.h  inc/saitunnel.h inc/saitypes.h  inc/saiudf.h  inc/saivlan.h  inc/saiwred.h
-
-
-
-
-
-
+                inc/saistp.h inc/saiswitch.h  inc/saitunnel.h inc/saitypes.h  inc/saiudf.h  inc/saivlan.h  inc/saiwred.h \
+		inc/saibridge.h
