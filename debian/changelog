@@ -1,3 +1,12 @@
+opx-sai-api (31.0.0) unstable; urgency=medium
+
+  * Feature: Added bridge API
+  * Update: Added port and WRED buffer pools
+  * Update: Added tunnel mappings and statistics
+  * Update: Support for bulk operations
+
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Fri, 16 Jun 2017 11:45:33 -0800
+
 opx-sai-api (26.1.0) unstable; urgency=medium
 
   * Update: SAI 1.0 changes
