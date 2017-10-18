@@ -88,6 +88,7 @@ typedef enum _sai_fc_switch_attr_t
     SAI_FC_SWITCH_ATTR_INIT_SWITCH,
 
     /**
+
      * @brief Set to switch profile id.
      *
      * @type uint32_t
@@ -104,6 +105,7 @@ typedef enum _sai_fc_switch_attr_t
     SAI_FC_SWITCH_ATTR_SERVICE_METHOD,
 
     /**
+
      * @brief Set Switch Port state change notification callback function passed to the adapter.
      *
      * Use sai_fc_port_state_change_notification_fn as notification function.
