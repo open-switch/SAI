@@ -517,6 +517,16 @@ typedef enum _sai_switch_attr_t
     SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID,
 
     /**
+     * @brief Default .1Q Bridge ID
+     *
+     * @type sai_object_id_t
+     * @flags READ_ONLY
+     * @objects SAI_OBJECT_TYPE_BRIDGE
+     * @default internal
+     */
+    SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID,
+
+    /**
      * @brief Switch/Global bind point for ingress ACL object
      *
      * Bind (or unbind) an ingress acl table or acl group globally. Enable/Update
