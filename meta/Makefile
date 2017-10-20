@@ -31,7 +31,7 @@ WARNINGS = \
 	-Wredundant-decls \
 	-Wshadow \
 	-Wstack-protector \
-	-Wstrict-aliasing=3 \
+	-Wstrict-aliasing=2 \
 	-Wswitch \
 	-Wswitch-default \
 	-Wunreachable-code \
@@ -39,53 +39,32 @@ WARNINGS = \
 	-Wvariadic-macros \
 	-Wwrite-strings
 
-CFLAGS += -I../inc $(WARNINGS)
+CFLAGS += -I../inc
 
 DEPS = $(wildcard ../inc/*.h)
 XMLDEPS = $(wildcard xml/*.xml)
 
-OBJ = saimetadata.o saimetadatautils.o saiserialize.o
+%.o: %.c $(DEPS)
+	gcc -c -o $@ $< $(CFLAGS) $(WARNINGS)
 
-SYMBOLS = $(OBJ:=.symbols)
-
-all: saisanitycheck saimetadatatest saiserializetest saidepgraph.svg $(SYMBOLS)
-	./saimetadatatest >/dev/null
-	./saiserializetest >/dev/null
+all: saisanitycheck saidepgraph.svg
 	./saisanitycheck
 
-CONSTHEADERS = saimetadatatypes.h saimetadatalogger.h saimetadatautils.h saiserialize.h
-
-xml: $(DEPS) Doxyfile $(CONSTHEADERS)
-	doxygen Doxyfile 2>&1 | perl -npe '$$e=1 if /warning/i; END{exit $$e}'
+xml: $(DEPS) Doxyfile saimetadatatypes.h
+	doxygen Doxyfile 2>&1 | perl -npe '$$e=1 if /warning/i; END{exit $$e}';
 	touch xml
 
-EXTRA = acronyms.txt aspell.en.pws *.pm
-
-saimetadatatest.c saimetadata.c saimetadata.h: xml $(XMLDEPS) parse.pl $(CONSTHEADERS) $(EXTRA)
+saimetadata.c saimetadata.h: xml $(XMLDEPS) parse.pl saimetadatatypes.h
 	perl parse.pl
 
-HEADERS = saimetadata.h $(CONSTHEADERS)
+saisanitycheck: saisanitycheck.c saimetadata.c saimetadata.h saimetadatatypes.h saimetadatautils.c saimetadatautils.h
+	g++ -c saimetadatautils.c -o /dev/null $(CFLAGS) $(WARNINGS)
+	g++ -c saisanitycheck.c -o /dev/null $(CFLAGS) $(WARNINGS)
+	g++ -c saimetadata.c -o /dev/null $(CFLAGS) $(WARNINGS)
+	gcc -o $@ saisanitycheck.c saimetadata.c saimetadatautils.c $(CFLAGS) $(WARNINGS)
 
-%.o: %.c $(HEADERS)
-	gcc -c -o $@ $< $(CFLAGS)
-
-%.o: %.cpp $(HEADERS)
-	gcc -c -o $@ $< $(CFLAGS)
-
-saisanitycheck: saisanitycheck.o $(OBJ)
-	gcc -o $@ $^
-
-saimetadatatest: saimetadatatest.o $(OBJ)
-	gcc -o $@ $^
-
-saiserializetest: saiserializetest.o $(OBJ)
-	gcc -o $@ $^
-
-saidepgraphgen: saidepgraphgen.o $(OBJ)
-	g++ -o $@ $^
-
-%.o.symbols: %.o
-	nm $^ | ./checksymbols.pl
+saidepgraphgen: saidepgraphgen.cpp
+	g++ -o $@ saidepgraphgen.cpp saimetadata.c saimetadatautils.c $(CFLAGS) $(WARNINGS)
 
 saidepgraph.gv: saidepgraphgen
 	./saidepgraphgen > $@
@@ -96,7 +75,5 @@ saidepgraph.svg: saidepgraph.gv
 .PHONY: clean
 
 clean:
-	rm -f *.o *~ .*~ *.tmp .*.swp .*.swo *.bak sai*.gv sai*.svg *.o.symbols
-	rm -f saimetadata.h saimetadata.c saimetadatatest.c
-	rm -f saisanitycheck saimetadatatest saiserializetest saidepgraphgen
-	rm -rf xml html dist
+	rm -f *.o *~ .*~ *.tmp .*.swp .*.swo *.bak saisanitycheck saimetadata.h saimetadata.c
+	rm -rf xml html dist saidepgraphgen sai*.gv sai*.svg

@@ -8,14 +8,14 @@
  *    THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR
  *    CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT
  *    LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS
- *    FOR A PARTICULAR PURPOSE, MERCHANTABILITY OR NON-INFRINGEMENT.
+ *    FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
  *
  *    See the Apache Version 2.0 License for specific language governing
  *    permissions and limitations under the License.
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
+ *    Dell Products, L.P., Facebook, Inc
  *
  * @file    saivlan.h
  *
@@ -34,9 +34,9 @@
  */
 
 /**
- * @def SAI_VLAN_COUNTER_SET_DEFAULT
+ * @def VLAN_COUNTER_SET_DEFAULT
  */
-#define SAI_VLAN_COUNTER_SET_DEFAULT 0
+#define VLAN_COUNTER_SET_DEFAULT 0
 
 /**
  * @brief Attribute data for tagging_mode parameter
@@ -67,27 +67,8 @@ typedef enum _sai_vlan_mcast_lookup_key_type_t
 } sai_vlan_mcast_lookup_key_type_t;
 
 /**
- * @brief Attribute data for unknown unicast, unknown multicast
- * and broadcast flood controls
- */
-typedef enum _sai_vlan_flood_control_type_t
-{
-    /** Flood on all vlan members */
-    SAI_VLAN_FLOOD_CONTROL_TYPE_ALL,
-
-    /** Disable flooding */
-    SAI_VLAN_FLOOD_CONTROL_TYPE_NONE,
-
-    /** Flood on the L2MC group */
-    SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP,
-
-} sai_vlan_flood_control_type_t;
-
-/**
  * @brief Attribute Id in sai_set_vlan_attribute() and
  * sai_get_vlan_attribute() calls
- *
- * @flags Contains flags
  */
 typedef enum _sai_vlan_attr_t
 {
@@ -101,23 +82,23 @@ typedef enum _sai_vlan_attr_t
      *
      * @type sai_uint16_t
      * @flags MANDATORY_ON_CREATE | CREATE_ONLY | KEY
-     * @isvlan true
      */
     SAI_VLAN_ATTR_VLAN_ID = SAI_VLAN_ATTR_START,
+
 
     /**
      * @brief List of vlan members in a VLAN
      *
      * @type sai_object_list_t
-     * @flags READ_ONLY
      * @objects SAI_OBJECT_TYPE_VLAN_MEMBER
+     * @flags READ_ONLY
      */
     SAI_VLAN_ATTR_MEMBER_LIST,
 
     /**
      * @brief Maximum number of learned MAC addresses
      *
-     * Zero means learning limit is disabled.
+     * Zero means learning limit disable
      *
      * @type sai_uint32_t
      * @flags CREATE_AND_SET
@@ -128,11 +109,11 @@ typedef enum _sai_vlan_attr_t
     /**
      * @brief STP Instance that the VLAN is associated to
      *
-     * Default to default STP instance id
+     * Default to default stp instance id
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_STP
+     * @flags CREATE_AND_SET
      * @default attrvalue SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID
      */
     SAI_VLAN_ATTR_STP_INSTANCE,
@@ -141,8 +122,8 @@ typedef enum _sai_vlan_attr_t
      * @brief To disable learning on a VLAN
      *
      * This should override port learn settings. If this is set to true on a
-     * vlan, then the source MAC learning is disabled for this vlan on a member
-     * port even if learn is enable on the port (based on port learn attribute).
+     * vlan, then the source mac learning is disabled for this vlan on a member
+     * port even if learn is enable on the port(based on port learn attribute)
      *
      * @type bool
      * @flags CREATE_AND_SET
@@ -169,60 +150,60 @@ typedef enum _sai_vlan_attr_t
     SAI_VLAN_ATTR_IPV6_MCAST_LOOKUP_KEY_TYPE,
 
     /**
-     * @brief L2MC Group ID that unknown non-IP mcast packets forwarded to
+     * @brief L2MC Group ID that unknown non-ip MACST packets forwarded to
      *
-     * Indicating the output ports/LAGs for unknown non-IP multicast packets.
+     * Indicating the output ports/LAGs for unknown non-ip multicast packets.
      * This attribute only takes effect when one of the following conditions is met:
-     * (1) non-IP multicast packet
-     * (2) IPv4 multicast packet && not linklocal && IPv4 mcast snooping disabled for vlan
-     * (3) IPv6 multicast packet && not linklocal && IPv6 mcast snooping disabled for vlan
+     * (1)non-ip multicast packet
+     * (2)IPv4 multicast packet && not linklocal && IPv4 mcast snooping disabled for vlan
+     * (3)IPv6 multicast packet && not linklocal && IPv6 mcast snooping disabled for vlan
      * In case of SAI_NULL_OBJECT_ID, unknown multicast packets will be discarded.
      * If the group has no member, unknown multicast packets will be discarded.
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_L2MC_GROUP
-     * @allownull true
+     * @flags CREATE_AND_SET
      * @default SAI_NULL_OBJECT_ID
+     * @allownull true
      */
     SAI_VLAN_ATTR_UNKNOWN_NON_IP_MCAST_OUTPUT_GROUP_ID,
 
     /**
-     * @brief L2MC Group ID that unknown IPv4 mcast packets forwarded to
+     * @brief L2MC Group ID that unknown ipv4 MACST packets forwarded to
      *
      * Indicating the output ports/LAGs for unknown IPv4 multicast packets.
      * This attribute only takes effect when the following condition is met:
-     * (1) IPv4 multicast packet && not linklocal && IPv4 mcast snooping enabled for vlan
+     * (1)IPv4 multicast packet && not linklocal && IPv4 mcast snooping enabled for vlan
      * In case of SAI_NULL_OBJECT_ID, unknown multicast packets will be discarded.
      * If the group has no member, unknown multicast packets will be discarded.
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_L2MC_GROUP
-     * @allownull true
+     * @flags CREATE_AND_SET
      * @default SAI_NULL_OBJECT_ID
+     * @allownull true
      */
     SAI_VLAN_ATTR_UNKNOWN_IPV4_MCAST_OUTPUT_GROUP_ID,
 
     /**
-     * @brief L2MC Group ID that unknown IPv6 mcast packets forwarded to
+     * @brief L2MC Group ID that unknown ipv6 MACST packets forwarded to
      *
      * Indicating the output ports/LAGs for unknown IPv6 multicast packets.
      * This attribute only takes effect when the following condition is met:
-     * (1) IPv6 multicast packet && not linklocal && IPv6 mcast snooping enabled for vlan
+     * (1)IPv6 multicast packet && not linklocal && IPv6 mcast snooping enabled for vlan
      * In case of SAI_NULL_OBJECT_ID, unknown multicast packets will be discarded.
      * If the group has no member, unknown multicast packets will be discarded.
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_L2MC_GROUP
-     * @allownull true
+     * @flags CREATE_AND_SET
      * @default SAI_NULL_OBJECT_ID
+     * @allownull true
      */
     SAI_VLAN_ATTR_UNKNOWN_IPV6_MCAST_OUTPUT_GROUP_ID,
 
     /**
-     * @brief L2MC Group ID that unknown linklocal mcast packets forwarded to
+     * @brief L2MC Group ID that unknown linklocal MACST packets forwarded to
      *
      * Indicating the output ports/LAGs for unknown linklocal multicast packets.
      * This attribute only takes effect when the following condition is met:
@@ -232,24 +213,24 @@ typedef enum _sai_vlan_attr_t
      * If the group has no member, unknown multicast packets will be discarded.
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_L2MC_GROUP
-     * @allownull true
+     * @flags CREATE_AND_SET
      * @default SAI_NULL_OBJECT_ID
+     * @allownull true
      */
     SAI_VLAN_ATTR_UNKNOWN_LINKLOCAL_MCAST_OUTPUT_GROUP_ID,
 
     /**
      * @brief VLAN bind point for ingress ACL object
      *
-     * Bind (or unbind) an ingress ACL table or ACL group on a VLAN. Enable/Update
+     * Bind (or unbind) an ingress acl table or acl group on a VLAN. Enable/Update
      * ingress ACL table or ACL group filtering by assigning the list of valid
      * object id. Disable ingress filtering by assigning SAI_NULL_OBJECT_ID
      * in the attribute value.
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_ACL_TABLE, SAI_OBJECT_TYPE_ACL_TABLE_GROUP
+     * @flags CREATE_AND_SET
      * @allownull true
      * @default SAI_NULL_OBJECT_ID
      */
@@ -258,19 +239,22 @@ typedef enum _sai_vlan_attr_t
     /**
      * @brief VLAN bind point for egress ACL object
      *
-     * Bind (or unbind) an egress ACL table or ACL group on a VLAN. Enable/Update
+     * Bind (or unbind) an egress acl table or acl group on a VLAN. Enable/Update
      * egress ACL table or ACL group filtering by assigning the list of valid
      * object id. Disable egress filtering by assigning SAI_NULL_OBJECT_ID
      * in the attribute value.
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_ACL_TABLE, SAI_OBJECT_TYPE_ACL_TABLE_GROUP
+     * @flags CREATE_AND_SET
      * @allownull true
      * @default SAI_NULL_OBJECT_ID
      */
     SAI_VLAN_ATTR_EGRESS_ACL,
 
+    /** User based Meta Data
+      * [sai_uint32_t] (CREATE_AND_SET)
+      * Value Range SAI_SWITCH_ATTR_VLAN_USER_META_DATA_RANGE */
     /**
      * @brief User based Meta Data
      *
@@ -283,90 +267,6 @@ typedef enum _sai_vlan_attr_t
     SAI_VLAN_ATTR_META_DATA,
 
     /**
-     * @brief Unknown unicast flood control type
-     *
-     * @type sai_vlan_flood_control_type_t
-     * @flags CREATE_AND_SET
-     * @default SAI_VLAN_FLOOD_CONTROL_TYPE_ALL
-     */
-    SAI_VLAN_ATTR_UNKNOWN_UNICAST_FLOOD_CONTROL_TYPE,
-
-    /**
-     * @brief Unknown unicast flood group.
-     *
-     * Provides control on the set of vlan members on which unknown unicast
-     * packets need to be flooded. This attribute would be used only when
-     * the SAI_VLAN_ATTR_UNKNOWN_UNICAST_FLOOD_CONTROL_TYPE is set as
-     * SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP. When this attribute's value is
-     * SAI_NULL_OBJECT_ID, then flooding would be disabled.
-     *
-     * @type sai_object_id_t
-     * @flags CREATE_AND_SET
-     * @objects SAI_OBJECT_TYPE_L2MC_GROUP
-     * @allownull true
-     * @default SAI_NULL_OBJECT_ID
-     * @validonly SAI_VLAN_ATTR_UNKNOWN_UNICAST_FLOOD_CONTROL_TYPE ==
-     * SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP
-     */
-    SAI_VLAN_ATTR_UNKNOWN_UNICAST_FLOOD_GROUP,
-
-    /**
-     * @brief Unknown unicast flood control type
-     *
-     * @type sai_vlan_flood_control_type_t
-     * @flags CREATE_AND_SET
-     * @default SAI_VLAN_FLOOD_CONTROL_TYPE_ALL
-     */
-    SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE,
-
-    /**
-     * @brief Unknown multicast flood group.
-     *
-     * Provides control on the set of vlan members on which unknown multicast
-     * packets need to be flooded. This attribute would be used only when
-     * the SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE is set as
-     * SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP.When this attribute's value is
-     * SAI_NULL_OBJECT_ID, then flooding would be disabled.
-     *
-     * @type sai_object_id_t
-     * @flags CREATE_AND_SET
-     * @objects SAI_OBJECT_TYPE_L2MC_GROUP
-     * @allownull true
-     * @default SAI_NULL_OBJECT_ID
-     * @validonly SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE ==
-     * SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP
-     */
-    SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP,
-
-    /**
-     * @brief Broadcast flood control type
-     *
-     * @type sai_vlan_flood_control_type_t
-     * @flags CREATE_AND_SET
-     * @default SAI_VLAN_FLOOD_CONTROL_TYPE_ALL
-     */
-    SAI_VLAN_ATTR_BROADCAST_FLOOD_CONTROL_TYPE,
-
-    /**
-     * @brief Broadcast flood group.
-     *
-     * Provides control on the set of vlan members on which broadcast
-     * packets need to be flooded. This attribute would be used only when
-     * the SAI_VLAN_ATTR_BROADCAST_FLOOD_CONTROL_TYPE is set as
-     * SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP.When this attribute's value is
-     * SAI_NULL_OBJECT_ID, then flooding would be disabled.
-     *
-     * @type sai_object_id_t
-     * @flags CREATE_AND_SET
-     * @objects SAI_OBJECT_TYPE_L2MC_GROUP
-     * @allownull true
-     * @default SAI_NULL_OBJECT_ID
-     * @validonly SAI_VLAN_ATTR_BROADCAST_FLOOD_CONTROL_TYPE ==
-     * SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP
-     */
-    SAI_VLAN_ATTR_BROADCAST_FLOOD_GROUP,
-
-    /**
      * @brief End of attributes
      */
     SAI_VLAN_ATTR_END,
@@ -374,19 +274,7 @@ typedef enum _sai_vlan_attr_t
     /** Custom range base value */
     SAI_VLAN_ATTR_CUSTOM_RANGE_START = 0x10000000,
 
-    /**
-     * @brief IGMP Snooping enable or disable control for VLAN
-     *
-     * IGMP Snooping enable control for VLAN. Default is
-     * disabled
-     *
-     * @type bool
-     * @flags CREATE_AND_SET
-     * @default false
-     */
-    SAI_VLAN_ATTR_CUSTOM_IGMP_SNOOPING_ENABLE,
-
-    /** End of custom range base */
+    /** End oo custom range base */
     SAI_VLAN_ATTR_CUSTOM_RANGE_END
 
 } sai_vlan_attr_t;
@@ -405,21 +293,19 @@ typedef enum _sai_vlan_member_attr_t
      * @brief VLAN ID
      *
      * @type sai_object_id_t
-     * @flags MANDATORY_ON_CREATE | CREATE_ONLY
      * @objects SAI_OBJECT_TYPE_VLAN
+     * @flags MANDATORY_ON_CREATE | CREATE_ONLY
      */
     SAI_VLAN_MEMBER_ATTR_VLAN_ID = SAI_VLAN_MEMBER_ATTR_START,
 
     /**
-     * @brief Bridge port ID.
-     *
-     * Valid only for .1Q bridge ports.
+     * @brief Logical port ID
      *
      * @type sai_object_id_t
+     * @objects SAI_OBJECT_TYPE_PORT
      * @flags MANDATORY_ON_CREATE | CREATE_ONLY
-     * @objects SAI_OBJECT_TYPE_BRIDGE_PORT
      */
-    SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID,
+    SAI_VLAN_MEMBER_ATTR_PORT_ID,
 
     /**
      * @brief VLAN tagging mode
@@ -473,7 +359,7 @@ typedef enum _sai_vlan_stat_t
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_create_vlan_fn)(
         _Out_ sai_object_id_t *vlan_id,
@@ -486,7 +372,7 @@ typedef sai_status_t (*sai_create_vlan_fn)(
  *
  * @param[in] vlan_id VLAN member ID
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_remove_vlan_fn)(
         _In_ sai_object_id_t vlan_id);
@@ -497,7 +383,7 @@ typedef sai_status_t (*sai_remove_vlan_fn)(
  * @param[in] vlan_id VLAN ID
  * @param[in] attr Attribute structure containing ID and value
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_set_vlan_attribute_fn)(
         _In_ sai_object_id_t vlan_id,
@@ -510,11 +396,11 @@ typedef sai_status_t (*sai_set_vlan_attribute_fn)(
  * @param[in] attr_count Number of attributes
  * @param[inout] attr_list List of attribute structures containing ID and value
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_get_vlan_attribute_fn)(
         _In_ sai_object_id_t vlan_id,
-        _In_ uint32_t attr_count,
+        _In_ const uint32_t attr_count,
         _Inout_ sai_attribute_t *attr_list);
 
 /**
@@ -525,7 +411,7 @@ typedef sai_status_t (*sai_get_vlan_attribute_fn)(
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_create_vlan_member_fn)(
         _Out_ sai_object_id_t *vlan_member_id,
@@ -538,7 +424,7 @@ typedef sai_status_t (*sai_create_vlan_member_fn)(
  *
  * @param[in] vlan_member_id VLAN member ID
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_remove_vlan_member_fn)(
         _In_ sai_object_id_t vlan_member_id);
@@ -549,7 +435,7 @@ typedef sai_status_t (*sai_remove_vlan_member_fn)(
  * @param[in] vlan_member_id VLAN member ID
  * @param[in] attr Attribute structure containing ID and value
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_set_vlan_member_attribute_fn)(
         _In_ sai_object_id_t vlan_member_id,
@@ -562,42 +448,42 @@ typedef sai_status_t (*sai_set_vlan_member_attribute_fn)(
  * @param[in] attr_count Number of attributes
  * @param[inout] attr_list List of attribute structures containing ID and value
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_get_vlan_member_attribute_fn)(
         _In_ sai_object_id_t vlan_member_id,
-        _In_ uint32_t attr_count,
+        _In_ const uint32_t attr_count,
         _Inout_ sai_attribute_t *attr_list);
 
 /**
  * @brief Get vlan statistics counters.
  *
  * @param[in] vlan_id VLAN id
- * @param[in] number_of_counters Number of counters in the array
  * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] number_of_counters Number of counters in the array
  * @param[out] counters Array of resulting counter values.
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_get_vlan_stats_fn)(
         _In_ sai_object_id_t vlan_id,
-        _In_ uint32_t number_of_counters,
         _In_ const sai_vlan_stat_t *counter_ids,
+        _In_ uint32_t number_of_counters,
         _Out_ uint64_t *counters);
 
 /**
  * @brief Clear vlan statistics counters.
  *
  * @param[in] vlan_id Vlan id
- * @param[in] number_of_counters Number of counters in the array
  * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] number_of_counters Number of counters in the array
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_clear_vlan_stats_fn)(
         _In_ sai_object_id_t vlan_id,
-        _In_ uint32_t number_of_counters,
-        _In_ const sai_vlan_stat_t *counter_ids);
+        _In_ const sai_vlan_stat_t *counter_ids,
+        _In_ uint32_t number_of_counters);
 
 /**
  * @brief VLAN methods table retrieved with sai_api_query()
@@ -620,6 +506,6 @@ typedef struct _sai_vlan_api_t
 } sai_vlan_api_t;
 
 /**
- * @}
+ *@}
  */
 #endif /** __SAIVLAN_H_ */

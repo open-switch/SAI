@@ -8,14 +8,14 @@
  *    THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR
  *    CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT
  *    LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS
- *    FOR A PARTICULAR PURPOSE, MERCHANTABILITY OR NON-INFRINGEMENT.
+ *    FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
  *
  *    See the Apache Version 2.0 License for specific language governing
  *    permissions and limitations under the License.
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
+ *    Dell Products, L.P., Facebook, Inc
  *
  * @file    saiqueue.h
  *
@@ -28,7 +28,7 @@
 #include <saitypes.h>
 
 /**
- * @defgroup SAIQUEUE SAI - QOS Queue specific API definitions.
+ * @defgroup SAIQUEUE SAI - Qos Queue specific API definitions.
  *
  * @{
  */
@@ -73,11 +73,11 @@ typedef enum _sai_queue_attr_t
     SAI_QUEUE_ATTR_TYPE = SAI_QUEUE_ATTR_START,
 
     /**
-     * @brief Port id
+     * @brief Pord id
      *
      * @type sai_object_id_t
-     * @flags MANDATORY_ON_CREATE | CREATE_ONLY | KEY
      * @objects SAI_OBJECT_TYPE_PORT
+     * @flags MANDATORY_ON_CREATE | CREATE_ONLY | KEY
      */
     SAI_QUEUE_ATTR_PORT = 0x00000001,
 
@@ -92,13 +92,13 @@ typedef enum _sai_queue_attr_t
     /**
      * @brief Parent scheduler node
      *
-     * In case of Hierarchical QOS not supported, the parent node is the port.
-     * Condition on whether Hierarchical QOS is supported or not, need to remove
-     * the MANDATORY_ON_CREATE FLAG when HQoS is introduced.
+     * In case of Hierarchical Qos not supported, the parent node is the port.
+     * Condition on whether Hierarchial Qos is supported or not, need to remove
+     * the MANDATORY_ON_CREATE FLAG when HQoS is introduced
      *
      * @type sai_object_id_t
-     * @flags MANDATORY_ON_CREATE | CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_SCHEDULER_GROUP, SAI_OBJECT_TYPE_PORT
+     * @flags MANDATORY_ON_CREATE | CREATE_AND_SET
      */
     SAI_QUEUE_ATTR_PARENT_SCHEDULER_NODE = 0x00000003,
 
@@ -110,58 +110,35 @@ typedef enum _sai_queue_attr_t
      * ID = #SAI_NULL_OBJECT_ID to disable WRED
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_WRED
+     * @flags CREATE_AND_SET
      * @allownull true
      * @default SAI_NULL_OBJECT_ID
      */
     SAI_QUEUE_ATTR_WRED_PROFILE_ID = 0x00000004,
 
     /**
-     * @brief Attach buffer profile to queue
+     * @brief Attach buffer profile to Queue
+     * Default no profile
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_BUFFER_PROFILE
+     * @flags CREATE_AND_SET
      * @allownull true
      * @default SAI_NULL_OBJECT_ID
      */
     SAI_QUEUE_ATTR_BUFFER_PROFILE_ID = 0x00000005,
 
     /**
-     * @brief Attach scheduler to queue
+     * @brief Attach scheduler to Queue
      *
      * @type sai_object_id_t
-     * @flags CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_SCHEDULER
+     * @flags CREATE_AND_SET
      * @allownull true
      * @default SAI_NULL_OBJECT_ID
      */
     SAI_QUEUE_ATTR_SCHEDULER_PROFILE_ID = 0x00000006,
-
-    /**
-     * @brief Queue pause status
-     *
-     * This attribute represents the queue internal hardware state and is
-     * updated upon receiving PFC frames. True indicates the queue is paused.
-     *
-     * @type bool
-     * @flags READ_ONLY
-     */
-    SAI_QUEUE_ATTR_PAUSE_STATUS = 0x00000007,
-
-    /**
-     * @brief Enable PFC Deadlock Detection and Recovery (DLDR) on a lossless queue.
-     *
-     * A deadlock is assumed to have occurred when a queue is in a XOFF
-     * state for more than a configurable (SAI_SWITCH_ATTR_PFC_TC_DLD_INTERVAL)
-     * amount of time.
-     *
-     * @type bool
-     * @flags CREATE_AND_SET
-     * @default false
-     */
-    SAI_QUEUE_ATTR_ENABLE_PFC_DLDR = 0x00000008,
 
     /**
      * @brief End of attributes
@@ -181,144 +158,94 @@ typedef enum _sai_queue_attr_t
  */
 typedef enum _sai_queue_stat_t
 {
-    /** Get/set tx packets count [uint64_t] */
+    /** get/set tx packets count [uint64_t] */
     SAI_QUEUE_STAT_PACKETS = 0x00000000,
 
-    /** Get/set tx bytes count [uint64_t] */
+    /** get/set tx bytes count [uint64_t] */
     SAI_QUEUE_STAT_BYTES = 0x00000001,
 
-    /** Get/set dropped packets count [uint64_t] */
+    /** get/set dropped packets count [uint64_t] */
     SAI_QUEUE_STAT_DROPPED_PACKETS = 0x00000002,
 
-    /** Get/set dropped bytes count [uint64_t] */
+    /** get/set dropped bytes count [uint64_t] */
     SAI_QUEUE_STAT_DROPPED_BYTES = 0x00000003,
 
-    /** Get/set green color tx packets count [uint64_t] */
+    /** get/set green color tx packets count [uint64_t] */
     SAI_QUEUE_STAT_GREEN_PACKETS = 0x00000004,
 
-    /** Get/set green color tx bytes count [uint64_t] */
+    /** get/set green color tx bytes count [uint64_t] */
     SAI_QUEUE_STAT_GREEN_BYTES = 0x00000005,
 
-    /** Get/set green color dropped packets count [uint64_t] */
+    /** get/set green color dropped packets count [uint64_t] */
     SAI_QUEUE_STAT_GREEN_DROPPED_PACKETS = 0x00000006,
 
-    /** Get/set green color dropped packets count [uint64_t] */
+    /** get/set green color dropped packets count [uint64_t] */
     SAI_QUEUE_STAT_GREEN_DROPPED_BYTES = 0x00000007,
 
-    /** Get/set yellow color tx packets count [uint64_t] */
+    /** get/set yellow color tx packets count [uint64_t] */
     SAI_QUEUE_STAT_YELLOW_PACKETS = 0x00000008,
 
-    /** Get/set yellow color tx bytes count [uint64_t] */
+    /** get/set yellow color tx bytes count [uint64_t] */
     SAI_QUEUE_STAT_YELLOW_BYTES = 0x00000009,
 
-    /** Get/set yellow color drooped packets count [uint64_t] */
+    /** get/set yellow color drooped packets count [uint64_t] */
     SAI_QUEUE_STAT_YELLOW_DROPPED_PACKETS = 0x0000000a,
 
-    /** Get/set yellow color dropped bytes count [uint64_t] */
+    /** get/set yellow color dropped bytes count [uint64_t] */
     SAI_QUEUE_STAT_YELLOW_DROPPED_BYTES = 0x0000000b,
 
-    /** Get/set red color tx packets count [uint64_t] */
+    /** get/set red color tx packets count [uint64_t] */
     SAI_QUEUE_STAT_RED_PACKETS = 0x0000000c,
 
-    /** Get/set red color tx bytes count [uint64_t] */
+    /** get/set red color tx bytes count [uint64_t] */
     SAI_QUEUE_STAT_RED_BYTES = 0x0000000d,
 
-    /** Get/set red color dropped packets count [uint64_t] */
+    /** get/set red color dropped packets count [uint64_t] */
     SAI_QUEUE_STAT_RED_DROPPED_PACKETS = 0x0000000e,
 
-    /** Get/set red color drooped bytes count [uint64_t] */
+    /** get/set red color drooped bytes count [uint64_t] */
     SAI_QUEUE_STAT_RED_DROPPED_BYTES = 0x0000000f,
 
-    /** Get/set WRED green color dropped packets count [uint64_t] */
-    SAI_QUEUE_STAT_GREEN_WRED_DROPPED_PACKETS = 0x00000010,
+    /** get/set WRED green color dropped packets count [uint64_t] */
+    SAI_QUEUE_STAT_GREEN_DISCARD_DROPPED_PACKETS = 0x00000010,
 
-    /** Get/set WRED green color dropped bytes count [uint64_t] */
-    SAI_QUEUE_STAT_GREEN_WRED_DROPPED_BYTES = 0x00000011,
+    /** get/set WRED green color dropped bytes count [uint64_t] */
+    SAI_QUEUE_STAT_GREEN_DISCARD_DROPPED_BYTES = 0x00000011,
 
-    /** Get/set WRED yellow color dropped packets count [uint64_t] */
-    SAI_QUEUE_STAT_YELLOW_WRED_DROPPED_PACKETS = 0x00000012,
+    /** get/set WRED yellow color dropped packets count [uint64_t] */
+    SAI_QUEUE_STAT_YELLOW_DISCARD_DROPPED_PACKETS = 0x00000012,
 
-    /** Get/set WRED yellow color dropped bytes count [uint64_t] */
-    SAI_QUEUE_STAT_YELLOW_WRED_DROPPED_BYTES = 0x00000013,
+    /** get/set WRED yellow color dropped bytes count [uint64_t] */
+    SAI_QUEUE_STAT_YELLOW_DISCARD_DROPPED_BYTES = 0x00000013,
 
-    /** Get/set WRED red color dropped packets count [uint64_t] */
-    SAI_QUEUE_STAT_RED_WRED_DROPPED_PACKETS = 0x00000014,
+    /** get/set WRED red color dropped packets count [uint64_t] */
+    SAI_QUEUE_STAT_RED_DISCARD_DROPPED_PACKETS = 0x00000014,
 
-    /** Get/set WRED red color dropped bytes count [uint64_t] */
-    SAI_QUEUE_STAT_RED_WRED_DROPPED_BYTES = 0x00000015,
+    /** get/set WRED red color dropped bytes count [uint64_t] */
+    SAI_QUEUE_STAT_RED_DISCARD_DROPPED_BYTES = 0x00000015,
 
-    /** Get/set WRED dropped packets count [uint64_t] */
-    SAI_QUEUE_STAT_WRED_DROPPED_PACKETS = 0x00000016,
+    /** get/set WRED dropped packets count [uint64_t] */
+    SAI_QUEUE_STAT_DISCARD_DROPPED_PACKETS = 0x00000016,
 
-    /** Get/set WRED red dropped bytes count [uint64_t] */
-    SAI_QUEUE_STAT_WRED_DROPPED_BYTES = 0x00000017,
+    /** get/set WRED red dropped bytes count [uint64_t] */
+    SAI_QUEUE_STAT_DISCARD_DROPPED_BYTES = 0x00000017,
 
-    /** Get current queue occupancy in bytes [uint64_t] */
+    /** get current queue occupancy in bytes [uint64_t] */
     SAI_QUEUE_STAT_CURR_OCCUPANCY_BYTES = 0x00000018,
 
-    /** Get watermark queue occupancy in bytes [uint64_t] */
+    /** get watermark queue occupancy in bytes [uint64_t] */
     SAI_QUEUE_STAT_WATERMARK_BYTES = 0x00000019,
 
-    /** Get current queue shared occupancy in bytes [uint64_t] */
+    /** get current queue shared occupancy in bytes [uint64_t] */
     SAI_QUEUE_STAT_SHARED_CURR_OCCUPANCY_BYTES = 0x0000001a,
 
-    /** Get watermark queue shared occupancy in bytes [uint64_t] */
+    /** get watermark queue shared occupancy in bytes [uint64_t] */
     SAI_QUEUE_STAT_SHARED_WATERMARK_BYTES = 0x0000001b,
-
-    /** Get/set WRED green color marked packets count [uint64_t] */
-    SAI_QUEUE_STAT_GREEN_WRED_ECN_MARKED_PACKETS = 0x0000001c,
-
-    /** Get/set WRED green color marked bytes count [uint64_t] */
-    SAI_QUEUE_STAT_GREEN_WRED_ECN_MARKED_BYTES = 0x0000001d,
-
-    /** Get/set WRED yellow color marked packets count [uint64_t] */
-    SAI_QUEUE_STAT_YELLOW_WRED_ECN_MARKED_PACKETS = 0x0000001e,
-
-    /** Get/set WRED yellow color marked bytes count [uint64_t] */
-    SAI_QUEUE_STAT_YELLOW_WRED_ECN_MARKED_BYTES = 0x0000001f,
-
-    /** Get/set WRED red color marked packets count [uint64_t] */
-    SAI_QUEUE_STAT_RED_WRED_ECN_MARKED_PACKETS = 0x00000020,
-
-    /** Get/set WRED red color marked bytes count [uint64_t] */
-    SAI_QUEUE_STAT_RED_WRED_ECN_MARKED_BYTES = 0x00000021,
-
-    /** Get/set WRED marked packets count [uint64_t] */
-    SAI_QUEUE_STAT_WRED_ECN_MARKED_PACKETS = 0x00000022,
-
-    /** Get/set WRED red marked bytes count [uint64_t] */
-    SAI_QUEUE_STAT_WRED_ECN_MARKED_BYTES = 0x00000023,
 
     /** Custom range base value */
     SAI_QUEUE_STAT_CUSTOM_RANGE_BASE = 0x10000000
 
 } sai_queue_stat_t;
-
-/**
- * @brief Enum defining Queue deadlock event state.
- */
-typedef enum _sai_queue_pfc_deadlock_event_type_t
-{
-    /** PFC deadlock detected */
-    SAI_QUEUE_PFC_DEADLOCK_EVENT_TYPE_DETECTED,
-
-    /** PFC deadlock recovery ended */
-    SAI_QUEUE_PFC_DEADLOCK_EVENT_TYPE_RECOVERED
-
-} sai_queue_pfc_deadlock_event_type_t;
-
-/**
- * @brief Notification data format received from SAI queue deadlock event callback
- */
-typedef struct _sai_queue_deadlock_notification_data_t
-{
-    /** Queue id */
-    sai_object_id_t queue_id;
-
-    /** Deadlock event */
-    sai_queue_pfc_deadlock_event_type_t event;
-
-} sai_queue_deadlock_notification_data_t;
 
 /**
  * @brief Create queue
@@ -328,7 +255,7 @@ typedef struct _sai_queue_deadlock_notification_data_t
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_create_queue_fn)(
         _Out_ sai_object_id_t *queue_id,
@@ -341,7 +268,7 @@ typedef sai_status_t (*sai_create_queue_fn)(
  *
  * @param[in] queue_id Queue id
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_remove_queue_fn)(
         _In_ sai_object_id_t queue_id);
@@ -349,10 +276,10 @@ typedef sai_status_t (*sai_remove_queue_fn)(
 /**
  * @brief Set attribute to Queue
  *
- * @param[in] queue_id Queue ID to set the attribute
- * @param[in] attr Attribute to set
+ * @param[in] queue_id queue id to set the attribute
+ * @param[in] attr attribute to set
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_set_queue_attribute_fn)(
         _In_ sai_object_id_t queue_id,
@@ -365,59 +292,46 @@ typedef sai_status_t (*sai_set_queue_attribute_fn)(
  * @param[in] attr_count Number of attributes
  * @param[inout] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_get_queue_attribute_fn)(
         _In_ sai_object_id_t queue_id,
         _In_ uint32_t attr_count,
-        _Inout_ sai_attribute_t *attr_list);
+        _Inout_ sai_attribute_t *attr_list
+        );
 
 /**
  * @brief Get queue statistics counters.
  *
  * @param[in] queue_id Queue id
- * @param[in] number_of_counters Number of counters in the array
  * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] number_of_counters Number of counters in the array
  * @param[out] counters Array of resulting counter values.
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_get_queue_stats_fn)(
         _In_ sai_object_id_t queue_id,
-        _In_ uint32_t number_of_counters,
         _In_ const sai_queue_stat_t *counter_ids,
+        _In_ uint32_t number_of_counters,
         _Out_ uint64_t *counters);
 
 /**
  * @brief Clear queue statistics counters.
  *
  * @param[in] queue_id Queue id
- * @param[in] number_of_counters Number of counters in the array
  * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] number_of_counters Number of counters in the array
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_clear_queue_stats_fn)(
         _In_ sai_object_id_t queue_id,
-        _In_ uint32_t number_of_counters,
-        _In_ const sai_queue_stat_t *counter_ids);
+        _In_ const sai_queue_stat_t *counter_ids,
+        _In_ uint32_t number_of_counters);
 
 /**
- * @brief Queue PFC deadlock event notification
- *
- * Passed as a parameter into sai_initialize_switch()
- *
- * @count data[count]
- *
- * @param[in] count Number of notifications
- * @param[in] data Array of queue event types
- */
-typedef void (*sai_queue_pfc_deadlock_notification_fn)(
-        _In_ uint32_t count,
-        _In_ sai_queue_deadlock_notification_data_t *data);
-
-/**
- * @brief QOS methods table retrieved with sai_api_query()
+ * @brief Qos methods table retrieved with sai_api_query()
  */
 typedef struct _sai_queue_api_t
 {
