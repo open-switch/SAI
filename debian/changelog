@@ -1,0 +1,28 @@
+opx-sai-api (31.0.0) unstable; urgency=medium
+
+  * Update: Synced with latest saitunnel.h and saitypes.h
+  * Update: Changes to support WRED at Queue, Port and Buffer Pool level
+  * Update: SAI API for WRED - SAI v0.9.6
+  * Update: switch attribute
+  * Update: Added new attribute to saifcswitch.
+  * Bugfix: Miscellaneous bug fixes
+  * Cleanup: Miscellaneous cleanup
+
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Mon, 2 Oct 2017 11:45:33 -0800
+
+opx-sai-api (26.1.0) unstable; urgency=medium
+
+  * Update: SAI 1.0 changes
+  * Update: SAI 0.9.6 changes
+  * Feature: SAI FC Module API support
+  * Bugfix: Miscellaneous Bugfixes
+  * Cleanup: Miscellaneous Cleanup
+                     
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Fri, 16 Jun 2017 11:45:33 -0800
+
+
+opx-sai-api (1.0.1) unstable; urgency=medium
+
+  * Initial release.
+
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Wed, 01 Feb 2017 09:45:33 -0800

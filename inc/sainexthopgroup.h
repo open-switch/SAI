@@ -8,14 +8,14 @@
  *    THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR
  *    CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT
  *    LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS
- *    FOR A PARTICULAR PURPOSE, MERCHANTABILITY OR NON-INFRINGEMENT.
+ *    FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
  *
  *    See the Apache Version 2.0 License for specific language governing
  *    permissions and limitations under the License.
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
+ *    Dell Products, L.P., Facebook, Inc
  *
  * @file    sainexthopgroup.h
  *
@@ -41,38 +41,9 @@ typedef enum _sai_next_hop_group_type_t
     /** Next hop group is ECMP */
     SAI_NEXT_HOP_GROUP_TYPE_ECMP,
 
-    /** Next hop protection group. Contains primary and backup next hops. */
-    SAI_NEXT_HOP_GROUP_TYPE_PROTECTION,
-
     /* Other types of next hop group to be defined in the future, e.g., WCMP */
 
 } sai_next_hop_group_type_t;
-
-/**
- * @brief Next hop group member configured protection role
- */
-typedef enum _sai_next_hop_group_member_configured_role_t
-{
-    /** Next hop group member is primary */
-    SAI_NEXT_HOP_GROUP_MEMBER_CONFIGURED_ROLE_PRIMARY,
-
-    /** Next hop group member is standby */
-    SAI_NEXT_HOP_GROUP_MEMBER_CONFIGURED_ROLE_STANDBY,
-
-} sai_next_hop_group_member_configured_role_t;
-
-/**
- * @brief Next hop group member observed role
- */
-typedef enum _sai_next_hop_group_member_observed_role_t
-{
-    /** Next hop group member is active */
-    SAI_NEXT_HOP_GROUP_MEMBER_OBSERVED_ROLE_ACTIVE,
-
-    /** Next hop group member is inactive */
-    SAI_NEXT_HOP_GROUP_MEMBER_OBSERVED_ROLE_INACTIVE,
-
-} sai_next_hop_group_member_observed_role_t;
 
 /**
  * @brief Attribute id for next hop
@@ -94,10 +65,9 @@ typedef enum _sai_next_hop_group_attr_t
 
     /**
      * @brief Next hop member list
-     *
      * @type sai_object_list_t
-     * @flags READ_ONLY
      * @objects SAI_OBJECT_TYPE_NEXT_HOP_GROUP_MEMBER
+     * @flags READ_ONLY
      */
     SAI_NEXT_HOP_GROUP_ATTR_NEXT_HOP_MEMBER_LIST,
 
@@ -108,16 +78,6 @@ typedef enum _sai_next_hop_group_attr_t
      * @flags MANDATORY_ON_CREATE | CREATE_ONLY
      */
     SAI_NEXT_HOP_GROUP_ATTR_TYPE,
-
-    /**
-     * @brief Trigger a switch-over from primary to backup next hop
-     *
-     * @type bool
-     * @flags CREATE_AND_SET
-     * @default false
-     * @validonly SAI_NEXT_HOP_GROUP_ATTR_TYPE == SAI_NEXT_HOP_GROUP_TYPE_PROTECTION
-     */
-    SAI_NEXT_HOP_GROUP_ATTR_SET_SWITCHOVER,
 
     /**
      * @brief End of attributes
@@ -141,69 +101,27 @@ typedef enum _sai_next_hop_group_member_attr_t
 
     /**
      * @brief Next hop group id
-     *
      * @type sai_object_id_t
-     * @flags MANDATORY_ON_CREATE | CREATE_ONLY
      * @objects SAI_OBJECT_TYPE_NEXT_HOP_GROUP
+     * @flags MANDATORY_ON_CREATE | CREATE_ONLY
      */
     SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID = SAI_NEXT_HOP_GROUP_MEMBER_ATTR_START,
 
     /**
      * @brief Next hop id
-     *
      * @type sai_object_id_t
-     * @flags MANDATORY_ON_CREATE | CREATE_ONLY
      * @objects SAI_OBJECT_TYPE_NEXT_HOP
+     * @flags MANDATORY_ON_CREATE | CREATE_ONLY
      */
     SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID,
 
     /**
      * @brief Member weights
-     *
      * @type sai_uint32_t
      * @flags CREATE_AND_SET
      * @default 1
      */
     SAI_NEXT_HOP_GROUP_MEMBER_ATTR_WEIGHT,
-
-    /**
-     * @brief Configured role in the protection group
-     *
-     * Should only be used if the type of owning group is SAI_NEXT_HOP_GROUP_TYPE_PROTECTION
-     *
-     * @type sai_next_hop_group_member_configured_role_t
-     * @flags CREATE_ONLY
-     * @default SAI_NEXT_HOP_GROUP_MEMBER_CONFIGURED_ROLE_PRIMARY
-     */
-    SAI_NEXT_HOP_GROUP_MEMBER_ATTR_CONFIGURED_ROLE,
-
-    /**
-     * @brief The actual role in protection group
-     *
-     * Should only be used if the type of owning group is SAI_NEXT_HOP_GROUP_TYPE_PROTECTION
-     *
-     * @type sai_next_hop_group_member_observed_role_t
-     * @flags READ_ONLY
-     */
-    SAI_NEXT_HOP_GROUP_MEMBER_ATTR_OBSERVED_ROLE,
-
-    /**
-     * @brief The object to be monitored for this next hop.
-     *
-     * If the specified objects fails, the switching entity marks this
-     * next hop as SAI_NEXT_HOP_GROUP_MEMBER_PROTECTION_ROLE_FAILED and does
-     * not use it to forward traffic. If there is a backup next hop available
-     * in this group then the backup's observed role is set to
-     * SAI_NEXT_HOP_GROUP_MEMBER_PROTECTION_ROLE_FORWARDING and it is used to
-     * forward traffic.
-     *
-     * @type sai_object_id_t
-     * @flags CREATE_AND_SET
-     * @objects SAI_OBJECT_TYPE_PORT, SAI_OBJECT_TYPE_LAG, SAI_OBJECT_TYPE_ROUTER_INTERFACE, SAI_OBJECT_TYPE_VLAN_MEMBER, SAI_OBJECT_TYPE_TUNNEL, SAI_OBJECT_TYPE_BRIDGE_PORT
-     * @allownull true
-     * @default SAI_NULL_OBJECT_ID
-     */
-    SAI_NEXT_HOP_GROUP_MEMBER_ATTR_MONITORED_OBJECT,
 
     /**
      * @brief End of attributes
@@ -226,7 +144,7 @@ typedef enum _sai_next_hop_group_member_attr_t
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_create_next_hop_group_fn)(
         _Out_ sai_object_id_t *next_hop_group_id,
@@ -239,7 +157,7 @@ typedef sai_status_t (*sai_create_next_hop_group_fn)(
  *
  * @param[in] next_hop_group_id Next hop group id
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_remove_next_hop_group_fn)(
         _In_ sai_object_id_t next_hop_group_id);
@@ -247,10 +165,10 @@ typedef sai_status_t (*sai_remove_next_hop_group_fn)(
 /**
  * @brief Set Next Hop Group attribute
  *
- * @param[in] next_hop_group_id Next hop group id
+ * @param[in] sai_object_id_t Next hop group id
  * @param[in] attr Attribute
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_set_next_hop_group_attribute_fn)(
         _In_ sai_object_id_t next_hop_group_id,
@@ -259,11 +177,11 @@ typedef sai_status_t (*sai_set_next_hop_group_attribute_fn)(
 /**
  * @brief Get Next Hop Group attribute
  *
- * @param[in] next_hop_group_id Next hop group ID
- * @param[in] attr_count Number of attributes
+ * @param[in] sai_object_id_t Next_hop_group_id
+ * @param[in] attr_count -Number of attributes
  * @param[inout] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_get_next_hop_group_attribute_fn)(
         _In_ sai_object_id_t next_hop_group_id,
@@ -273,57 +191,62 @@ typedef sai_status_t (*sai_get_next_hop_group_attribute_fn)(
 /**
  * @brief Create next hop group member
  *
- * @param[out] next_hop_group_member_id Next hop group member id
- * @param[in] switch_id Switch ID
- * @param[in] attr_count Number of attributes
- * @param[in] attr_list Array of attributes
+ * @param[out] next_hop_group_member_id - next hop group member id
+ * @param[in] switch_id Switch id
+ * @param[in] attr_count - number of attributes
+ * @param[in] attr_list - array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_create_next_hop_group_member_fn)(
-        _Out_ sai_object_id_t *next_hop_group_member_id,
-        _In_ sai_object_id_t switch_id,
-        _In_ uint32_t attr_count,
-        _In_ const sai_attribute_t *attr_list);
+    _Out_ sai_object_id_t* next_hop_group_member_id,
+    _In_ sai_object_id_t switch_id,
+    _In_ uint32_t attr_count,
+    _In_ const sai_attribute_t *attr_list
+    );
 
 /**
  * @brief Remove next hop group member
  *
- * @param[in] next_hop_group_member_id Next hop group member ID
+ * @param[in] next_hop_group_member_id - next hop group member id
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_remove_next_hop_group_member_fn)(
-        _In_ sai_object_id_t next_hop_group_member_id);
+    _In_ sai_object_id_t next_hop_group_member_id
+    );
 
 /**
  * @brief Set Next Hop Group attribute
  *
- * @param[in] next_hop_group_member_id Next hop group member ID
- * @param[in] attr Attribute
+ * @param[in] sai_object_id_t - next_hop_group_member_id
+ * @param[in] attr - attribute
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_set_next_hop_group_member_attribute_fn)(
-        _In_ sai_object_id_t next_hop_group_member_id,
-        _In_ const sai_attribute_t *attr);
+    _In_ sai_object_id_t next_hop_group_member_id,
+    _In_ const sai_attribute_t *attr
+    );
+
 
 /**
  * @brief Get Next Hop Group attribute
  *
- * @param[in] next_hop_group_member_id Next hop group member ID
- * @param[in] attr_count Number of attributes
- * @param[inout] attr_list Array of attributes
+ * @param[in] sai_object_id_t - next_hop_group_member_id
+ * @param[in] attr_count - number of attributes
+ * @param[inout] attr_list - array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ * @return SAI_STATUS_SUCCESS on success Failure status code on error
  */
 typedef sai_status_t (*sai_get_next_hop_group_member_attribute_fn)(
-        _In_ sai_object_id_t next_hop_group_member_id,
-        _In_ uint32_t attr_count,
-        _Inout_ sai_attribute_t *attr_list);
+    _In_ sai_object_id_t next_hop_group_member_id,
+    _In_ uint32_t attr_count,
+    _Inout_ sai_attribute_t *attr_list
+    );
 
 /**
- * @brief Next Hop methods table retrieved with sai_api_query()
+ *  @brief Next Hop methods table retrieved with sai_api_query()
  */
 typedef struct _sai_next_hop_group_api_t
 {

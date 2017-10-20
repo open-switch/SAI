@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc., Marvell International Ltd.
+ *    Dell Products, L.P., Facebook, Inc
  *
  * @file    saiport.h
  *
@@ -117,6 +117,35 @@ typedef enum _sai_port_internal_loopback_mode_t
 } sai_port_internal_loopback_mode_t;
 
 /**
+ * @brief Attribute data for #SAI_PORT_ATTR_FDB_LEARNING_MODE
+ */
+typedef enum _sai_port_fdb_learning_mode_t
+{
+    /** Drop packets with unknown source MAC. Do not learn. Do not forward */
+    SAI_PORT_FDB_LEARNING_MODE_DROP,
+
+    /** Do not learn unknown source MAC. Forward based on destination MAC */
+    SAI_PORT_FDB_LEARNING_MODE_DISABLE,
+
+    /** Hardware learning. Learn source MAC. Forward based on destination MAC */
+    SAI_PORT_FDB_LEARNING_MODE_HW,
+
+    /** Trap packets with unknown source MAC to CPU. Do not learn. Do not forward */
+    SAI_PORT_FDB_LEARNING_MODE_CPU_TRAP,
+
+    /** Trap packets with unknown source MAC to CPU. Do not learn. Forward based on destination MAC */
+    SAI_PORT_FDB_LEARNING_MODE_CPU_LOG,
+
+    /** Notify unknown source MAC using FDB callback. Do not learn in hardware. Do not forward.
+      * When a packet from unknown source MAC comes this mode will trigger a new learn notification
+      * via FDB callback for the MAC address. This mode will generate only one notification
+      * per unknown source MAC to FDB callback.
+      */
+    SAI_PORT_FDB_LEARNING_MODE_FDB_NOTIFICATION,
+
+} sai_port_fdb_learning_mode_t;
+
+/**
  * @brief Attribute data for #SAI_PORT_ATTR_MEDIA_TYPE
  */
 typedef enum _sai_port_media_type_t
@@ -200,7 +229,7 @@ typedef enum _sai_port_attr_t
     /**
      * @brief Breakout mode(s) supported
      *
-     * @type sai_s32_list_t sai_port_breakout_mode_type_t
+     * @type sai_s32_list_t
      * @flags READ_ONLY
      */
     SAI_PORT_ATTR_SUPPORTED_BREAKOUT_MODE_TYPE,
@@ -360,14 +389,6 @@ typedef enum _sai_port_attr_t
     SAI_PORT_ATTR_REMOTE_ADVERTISED_MEDIA_TYPE,
 
     /**
-     * @brief Query Remote port Advertised OUI Code
-     *
-     * @type sai_uint32_t
-     * @flags READ_ONLY
-     */
-    SAI_PORT_ATTR_REMOTE_ADVERTISED_OUI_CODE,
-
-    /**
      * @brief Number of ingress priority groups
      *
      * @type sai_uint32_t
@@ -415,7 +436,7 @@ typedef enum _sai_port_attr_t
      * @brief Auto Negotiation configuration
      *
      * @type bool
-     * @flags CREATE_AND_SET
+     * @flags CREATE_ONLY
      * @default false
      */
     SAI_PORT_ATTR_AUTO_NEG_MODE,
@@ -433,7 +454,7 @@ typedef enum _sai_port_attr_t
      * @brief Media Type
      *
      * @type sai_port_media_type_t
-     * @flags CREATE_AND_SET
+     * @flags CREATE_ONLY
      * @default SAI_PORT_MEDIA_TYPE_NOT_PRESENT
      */
     SAI_PORT_ATTR_MEDIA_TYPE,
@@ -502,19 +523,6 @@ typedef enum _sai_port_attr_t
     SAI_PORT_ATTR_ADVERTISED_MEDIA_TYPE,
 
     /**
-     * @brief Query/Configure Port's Advertised OUI code
-     *
-     * Organizationally Unique Identifier for 25G/50G auto negotiation.
-     * Default is 0x6A737D for Ethernet Consortium
-     *
-     * @type sai_uint32_t
-     * @flags CREATE_AND_SET
-     * @default 0x6A737D
-     * @validonly SAI_PORT_ATTR_SPEED == 25000 or SAI_PORT_ATTR_SPEED == 50000
-     */
-    SAI_PORT_ATTR_ADVERTISED_OUI_CODE,
-
-    /**
      * @brief Port VLAN ID
      *
      * Untagged ingress frames are tagged with Port VLAN ID (PVID).
@@ -534,6 +542,15 @@ typedef enum _sai_port_attr_t
      * @default 0
      */
     SAI_PORT_ATTR_DEFAULT_VLAN_PRIORITY,
+
+    /**
+     * @brief Ingress Filtering (Drop Frames with Unknown VLANs)
+     *
+     * @type bool
+     * @flags CREATE_AND_SET
+     * @default false
+     */
+    SAI_PORT_ATTR_INGRESS_FILTERING,
 
     /**
      * @brief Dropping of untagged frames on ingress
@@ -570,6 +587,15 @@ typedef enum _sai_port_attr_t
      * @default SAI_PORT_FEC_MODE_NONE
      */
     SAI_PORT_ATTR_FEC_MODE,
+
+    /**
+     * @brief FDB Learning mode
+     *
+     * @type sai_port_fdb_learning_mode_t
+     * @flags CREATE_AND_SET
+     * @default SAI_PORT_FDB_LEARNING_MODE_HW
+     */
+    SAI_PORT_ATTR_FDB_LEARNING_MODE,
 
     /**
      * @brief Update DSCP of outgoing packets
@@ -637,6 +663,25 @@ typedef enum _sai_port_attr_t
      * @default SAI_PORT_FLOW_CONTROL_MODE_DISABLE
      */
     SAI_PORT_ATTR_GLOBAL_FLOW_CONTROL_MODE,
+
+    /**
+     * @brief Maximum number of learned MAC addresses
+     *
+     * @type sai_uint32_t
+     * @flags CREATE_AND_SET
+     * @default 0
+     */
+    SAI_PORT_ATTR_MAX_LEARNED_ADDRESSES,
+
+    /**
+     * @brief Action for packets with unknown source mac address
+     * when FDB learning limit is reached.
+     *
+     * @type sai_packet_action_t
+     * @flags CREATE_AND_SET
+     * @default SAI_PACKET_ACTION_DROP
+     */
+    SAI_PORT_ATTR_FDB_LEARNING_LIMIT_VIOLATION_PACKET_ACTION,
 
     /**
      * @brief Port bind point for ingress ACL object
@@ -777,6 +822,12 @@ typedef enum _sai_port_attr_t
      */
     SAI_PORT_ATTR_QOS_DOT1P_TO_COLOR_MAP,
 
+    /** Enable DOT1P -> TC AND COLOR MAP [sai_object_id_t] on port
+    * MAP id = SAI_NULL_OBJECT_ID to disable map on port.
+    * To enable/disable trust Dot1p, Map ID should be add/remove on port.
+    * Default no map */
+    SAI_PORT_ATTR_QOS_DOT1P_TO_TC_AND_COLOR_MAP,
+
     /**
      * @brief Enable DSCP -> TC MAP on port
      *
@@ -805,6 +856,12 @@ typedef enum _sai_port_attr_t
      * @default SAI_NULL_OBJECT_ID
      */
     SAI_PORT_ATTR_QOS_DSCP_TO_COLOR_MAP,
+
+    /** Enable DSCP -> TC AND COLOR MAP [sai_object_id_t] on port
+    * MAP id = SAI_NULL_OBJECT_ID to disable map on port.
+    * To enable/disable trust DSCP, Map ID should be add/remove on port.
+    * Default no map */
+    SAI_PORT_ATTR_QOS_DSCP_TO_TC_AND_COLOR_MAP,
 
     /**
      * @brief Enable TC -> Queue MAP on port
@@ -1019,21 +1076,36 @@ typedef enum _sai_port_attr_t
     SAI_PORT_ATTR_EEE_WAKE_TIME,
 
     /**
-     * @brief List of port pools for the port
-     *
-     * @type sai_object_list_t
-     * @flags READ_ONLY
-     * @objects SAI_OBJECT_TYPE_PORT_POOL
-     */
-    SAI_PORT_ATTR_PORT_POOL_LIST,
-
-    /**
      * @brief End of attributes
      */
     SAI_PORT_ATTR_END,
 
     /** Custom range base value */
     SAI_PORT_ATTR_CUSTOM_RANGE_START = 0x10000000,
+
+    /** Port level Location LED
+     * Location LED helps to identify the location of the frond port in the
+     * given port. */
+    SAI_PORT_ATTR_LOCATION_LED,
+
+    /**
+     * @brief Query Remote port Advertised OUI Code
+     *
+     * @type sai_uint32_t
+     * @flags READ_ONLY
+     */
+    SAI_PORT_ATTR_REMOTE_ADVERTISED_OUI_CODE,
+
+    /**
+     * @brief Query/Configure Port's Advertised OUI code
+     *
+     * Organizationally Unique Identifier for 25G/50G auto negotiation
+     *
+     * @type sai_uint32_t
+     * @flags CREATE_AND_SET
+     * @default 0x6A737D
+     */
+    SAI_PORT_ATTR_ADVERTISED_OUI_CODE,
 
     /** End of custom range base */
     SAI_PORT_ATTR_CUSTOM_RANGE_END
@@ -1232,28 +1304,28 @@ typedef enum _sai_port_stat_t
     SAI_PORT_STAT_IPV6_OUT_DISCARDS,
 
     /** Get/set WRED green packet count [uint64_t] */
-    SAI_PORT_STAT_GREEN_WRED_DROPPED_PACKETS,
+    SAI_PORT_STAT_GREEN_DISCARD_DROPPED_PACKETS,
 
     /** Get/set WRED green byte count [uint64_t] */
-    SAI_PORT_STAT_GREEN_WRED_DROPPED_BYTES,
+    SAI_PORT_STAT_GREEN_DISCARD_DROPPED_BYTES,
 
     /** Get/set WRED yellow packet count [uint64_t] */
-    SAI_PORT_STAT_YELLOW_WRED_DROPPED_PACKETS,
+    SAI_PORT_STAT_YELLOW_DISCARD_DROPPED_PACKETS,
 
     /** Get/set WRED yellow byte count [uint64_t] */
-    SAI_PORT_STAT_YELLOW_WRED_DROPPED_BYTES,
+    SAI_PORT_STAT_YELLOW_DISCARD_DROPPED_BYTES,
 
     /** Get/set WRED red packet count [uint64_t] */
-    SAI_PORT_STAT_RED_WRED_DROPPED_PACKETS,
+    SAI_PORT_STAT_RED_DISCARD_DROPPED_PACKETS,
 
     /** Get/set WRED red byte count [uint64_t] */
-    SAI_PORT_STAT_RED_WRED_DROPPED_BYTES,
+    SAI_PORT_STAT_RED_DISCARD_DROPPED_BYTES,
 
     /** Get/set WRED dropped packets count [uint64_t] */
-    SAI_PORT_STAT_WRED_DROPPED_PACKETS,
+    SAI_PORT_STAT_DISCARD_DROPPED_PACKETS,
 
     /** Get/set WRED dropped bytes count [uint64_t] */
-    SAI_PORT_STAT_WRED_DROPPED_BYTES,
+    SAI_PORT_STAT_DISCARD_DROPPED_BYTES,
 
     /** Get/set packets marked by ECN count [uint64_t] */
     SAI_PORT_STAT_ECN_MARKED_PACKETS,
@@ -1402,109 +1474,20 @@ typedef enum _sai_port_stat_t
     /** SAI port stat PFC 7 tx pkts */
     SAI_PORT_STAT_PFC_7_TX_PKTS,
 
-    /**
-     * @brief PFC pause duration for RX and TX per PFC priority [uint64_t]
-     *
-     * RX pause duration for certain priority is a the duration quanta in ingress pause
-     * frame for that priority (a pause frame received by the switch).
-     * While TX pause duration for certain priority is the duration quanta in egress pause
-     * frame for that priority (a pause frame sent by the switch).
-     */
-    SAI_PORT_STAT_PFC_0_RX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 0 tx duration */
-    SAI_PORT_STAT_PFC_0_TX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 1 rx duration */
-    SAI_PORT_STAT_PFC_1_RX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 1 tx duration */
-    SAI_PORT_STAT_PFC_1_TX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 2 rx duration */
-    SAI_PORT_STAT_PFC_2_RX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 2 tx duration */
-    SAI_PORT_STAT_PFC_2_TX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 3 rx duration */
-    SAI_PORT_STAT_PFC_3_RX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 3 tx duration */
-    SAI_PORT_STAT_PFC_3_TX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 4 rx duration */
-    SAI_PORT_STAT_PFC_4_RX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 4 tx duration */
-    SAI_PORT_STAT_PFC_4_TX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 5 rx duration */
-    SAI_PORT_STAT_PFC_5_RX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 5 tx duration */
-    SAI_PORT_STAT_PFC_5_TX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 6 rx duration */
-    SAI_PORT_STAT_PFC_6_RX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 6 tx duration */
-    SAI_PORT_STAT_PFC_6_TX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 7 rx duration */
-    SAI_PORT_STAT_PFC_7_RX_PAUSE_DURATION,
-
-    /** SAI port stat PFC 7 tx duration */
-    SAI_PORT_STAT_PFC_7_TX_PAUSE_DURATION,
-
-    /** PFC based ON to OFF pause transitions counter per PFC priority [uint64_t] */
-    SAI_PORT_STAT_PFC_0_ON2OFF_RX_PKTS,
-
-    /** SAI port stat PFC 1 on to off rx pkts */
-    SAI_PORT_STAT_PFC_1_ON2OFF_RX_PKTS,
-
-    /** SAI port stat PFC 2 on to off rx pkts */
-    SAI_PORT_STAT_PFC_2_ON2OFF_RX_PKTS,
-
-    /** SAI port stat PFC 3 on to off rx pkts */
-    SAI_PORT_STAT_PFC_3_ON2OFF_RX_PKTS,
-
-    /** SAI port stat PFC 4 on to off rx pkts */
-    SAI_PORT_STAT_PFC_4_ON2OFF_RX_PKTS,
-
-    /** SAI port stat PFC 5 on to off rx pkts */
-    SAI_PORT_STAT_PFC_5_ON2OFF_RX_PKTS,
-
-    /** SAI port stat PFC 6 on to off rx pkts */
-    SAI_PORT_STAT_PFC_6_ON2OFF_RX_PKTS,
-
-    /** SAI port stat PFC 7 on to off rx pkts */
-    SAI_PORT_STAT_PFC_7_ON2OFF_RX_PKTS,
-
-    /**
-     * @brief Number of times port state changed from
-     * high power mode to low power mode in TX direction [uint64_t]
-     */
+    /** Number of times port state changed from
+     * high power mode to low power mode in TX direction [uint64_t] */
     SAI_PORT_STAT_EEE_TX_EVENT_COUNT,
 
-    /**
-     * @brief Number of times port state changed from
-     * high power mode to low power mode in RX direction [uint64_t]
-     */
+    /** Number of times port state changed from
+     * high power mode to low power mode in RX direction [uint64_t] */
     SAI_PORT_STAT_EEE_RX_EVENT_COUNT,
 
-    /**
-     * @brief Port Low power mode duration(micro secs) in TX direction [uint64_t].
-     *
-     * This Duration is accumulative since EEE enable on port/from last clear stats.
-     */
+    /** Port Low power mode duration(micro secs) in TX direction [uint64_t].
+     * This Duration is accumulative since EEE enable on port/from last clear stats*/
     SAI_PORT_STAT_EEE_TX_DURATION,
 
-    /**
-     * @brief Port Low power mode duration(micro secs) in RX direction [uint64_t]
-     *
-     * This Duration is accumulative since EEE enable on port/from last clear stats.
-     */
+    /** Port Low power mode duration(micro secs) in RX direction [uint64_t]
+     * This Duration is accumulative since EEE enable on port/from last clear stats*/
     SAI_PORT_STAT_EEE_RX_DURATION,
 
 } sai_port_stat_t;
@@ -1565,31 +1548,31 @@ typedef sai_status_t (*sai_get_port_attribute_fn)(
  * @brief Get port statistics counters.
  *
  * @param[in] port_id Port id
- * @param[in] number_of_counters Number of counters in the array
  * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] number_of_counters Number of counters in the array
  * @param[out] counters Array of resulting counter values.
  *
  * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_get_port_stats_fn)(
         _In_ sai_object_id_t port_id,
-        _In_ uint32_t number_of_counters,
         _In_ const sai_port_stat_t *counter_ids,
+        _In_ uint32_t number_of_counters,
         _Out_ uint64_t *counters);
 
 /**
  * @brief Clear port statistics counters.
  *
  * @param[in] port_id Port id
- * @param[in] number_of_counters Number of counters in the array
  * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] number_of_counters Number of counters in the array
  *
  * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
 typedef sai_status_t (*sai_clear_port_stats_fn)(
         _In_ sai_object_id_t port_id,
-        _In_ uint32_t number_of_counters,
-        _In_ const sai_port_stat_t *counter_ids);
+        _In_ const sai_port_stat_t *counter_ids,
+        _In_ uint32_t number_of_counters);
 
 /**
  * @brief Clear port's all statistics counters.
@@ -1682,53 +1665,32 @@ typedef enum _sai_port_pool_stat_t
     /** SAI port stat if octets */
     SAI_PORT_POOL_STAT_IF_OCTETS,
 
-    /** Get/set WRED green dropped packet count [uint64_t] */
-    SAI_PORT_POOL_STAT_GREEN_WRED_DROPPED_PACKETS,
+    /** Get/set WRED green packet count [uint64_t] */
+    SAI_PORT_POOL_STAT_GREEN_DISCARD_DROPPED_PACKETS,
 
-    /** Get/set WRED green dropped byte count [uint64_t] */
-    SAI_PORT_POOL_STAT_GREEN_WRED_DROPPED_BYTES,
+    /** Get/set WRED green byte count [uint64_t] */
+    SAI_PORT_POOL_STAT_GREEN_DISCARD_DROPPED_BYTES,
 
-    /** Get/set WRED yellow dropped packet count [uint64_t] */
-    SAI_PORT_POOL_STAT_YELLOW_WRED_DROPPED_PACKETS,
+    /** Get/set WRED yellow packet count [uint64_t] */
+    SAI_PORT_POOL_STAT_YELLOW_DISCARD_DROPPED_PACKETS,
 
-    /** Get/set WRED yellow dropped byte count [uint64_t] */
-    SAI_PORT_POOL_STAT_YELLOW_WRED_DROPPED_BYTES,
+    /** Get/set WRED yellow byte count [uint64_t] */
+    SAI_PORT_POOL_STAT_YELLOW_DISCARD_DROPPED_BYTES,
 
-    /** Get/set WRED red dropped packet count [uint64_t] */
-    SAI_PORT_POOL_STAT_RED_WRED_DROPPED_PACKETS,
+    /** Get/set WRED red packet count [uint64_t] */
+    SAI_PORT_POOL_STAT_RED_DISCARD_DROPPED_PACKETS,
 
-    /** Get/set WRED red dropped byte count [uint64_t] */
-    SAI_PORT_POOL_STAT_RED_WRED_DROPPED_BYTES,
+    /** Get/set WRED red byte count [uint64_t] */
+    SAI_PORT_POOL_STAT_RED_DISCARD_DROPPED_BYTES,
 
     /** Get/set WRED dropped packets count [uint64_t] */
-    SAI_PORT_POOL_STAT_WRED_DROPPED_PACKETS,
+    SAI_PORT_POOL_STAT_DISCARD_DROPPED_PACKETS,
 
     /** Get/set WRED dropped bytes count [uint64_t] */
-    SAI_PORT_POOL_STAT_WRED_DROPPED_BYTES,
+    SAI_PORT_POOL_STAT_DISCARD_DROPPED_BYTES,
 
-    /** Get/set WRED green marked packet count [uint64_t] */
-    SAI_PORT_POOL_STAT_GREEN_WRED_ECN_MARKED_PACKETS,
-
-    /** Get/set WRED green marked byte count [uint64_t] */
-    SAI_PORT_POOL_STAT_GREEN_WRED_ECN_MARKED_BYTES,
-
-    /** Get/set WRED yellow marked packet count [uint64_t] */
-    SAI_PORT_POOL_STAT_YELLOW_WRED_ECN_MARKED_PACKETS,
-
-    /** Get/set WRED yellow marked byte count [uint64_t] */
-    SAI_PORT_POOL_STAT_YELLOW_WRED_ECN_MARKED_BYTES,
-
-    /** Get/set WRED red marked packet count [uint64_t] */
-    SAI_PORT_POOL_STAT_RED_WRED_ECN_MARKED_PACKETS,
-
-    /** Get/set WRED red marked byte count [uint64_t] */
-    SAI_PORT_POOL_STAT_RED_WRED_ECN_MARKED_BYTES,
-
-    /** Get/set WRED marked packets count [uint64_t] */
-    SAI_PORT_POOL_STAT_WRED_ECN_MARKED_PACKETS,
-
-    /** Get/set WRED marked bytes count [uint64_t] */
-    SAI_PORT_POOL_STAT_WRED_ECN_MARKED_BYTES,
+    /** Get/set packets marked by ECN count [uint64_t] */
+    SAI_PORT_POOL_STAT_ECN_MARKED_PACKETS,
 
     /** Get in port current occupancy bytes [uint64_t] */
     SAI_PORT_POOL_STAT_CURR_OCCUPANCY_BYTES,
