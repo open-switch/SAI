@@ -8,14 +8,14 @@
  *    THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR
  *    CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT
  *    LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS
- *    FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
+ *    FOR A PARTICULAR PURPOSE, MERCHANTABILITY OR NON-INFRINGEMENT.
  *
  *    See the Apache Version 2.0 License for specific language governing
  *    permissions and limitations under the License.
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell Products, L.P., Facebook, Inc
+ *    Dell EMC, Facebook Inc., Marvell International Ltd.
  *
  * @file    saiacl.h
  *
@@ -153,7 +153,7 @@ typedef enum _sai_acl_action_type_t
     /** Egress Mirror */
     SAI_ACL_ACTION_TYPE_MIRROR_EGRESS,
 
-    /** Assosiate with policer (policer id) */
+    /** Associate with policer (policer id) */
     SAI_ACL_ACTION_TYPE_SET_POLICER,
 
     /** Decrement TTL */
@@ -225,7 +225,7 @@ typedef enum _sai_acl_action_type_t
     /** Set user defined trap id */
     SAI_ACL_ACTION_TYPE_SET_USER_TRAP_ID,
 
-    /** Set Do Not Learn unknow source MAC*/
+    /** Set Do Not Learn unknown source MAC*/
     SAI_ACL_ACTION_TYPE_SET_DO_NOT_LEARN,
 
 } sai_acl_action_type_t;
@@ -265,7 +265,7 @@ typedef enum _sai_acl_table_group_attr_t
      * @brief List of ACL bind points where this group will be applied.
      *
      * ACL group bind point list - is a create only attribute required for ACL
-     * groups to let the user specific his intention to allow further error
+     * groups to let the user specify his intention to allow further error
      * checks and optimizations based on a specific ASIC's SAI implementation.
      * ACL members being added to this group SHOULD be a subset of the bind
      * point list that acl group was created with.
@@ -1012,8 +1012,8 @@ typedef enum _sai_acl_entry_attr_t
     /*
      * Match fields [sai_acl_field_data_t]
      * - Mandatory to pass at least one field during ACL Rule creation.
-     * - Unless noted specificially, both data and mask are required.
-     * - When bit field is used, only those least significent bits are valid for
+     * - Unless noted specifically, both data and mask are required.
+     * - When bit field is used, only those least significant bits are valid for
      * matching.
      */
 
@@ -1543,7 +1543,7 @@ typedef enum _sai_acl_entry_attr_t
     SAI_ACL_ENTRY_ATTR_ACTION_MIRROR_EGRESS,
 
     /**
-     * @brief Assosiate with policer (policer id)
+     * @brief Associate with policer (policer id)
      *
      * @type sai_acl_action_data_t sai_object_id_t
      * @objects SAI_OBJECT_TYPE_POLICER
