@@ -59,7 +59,32 @@ typedef enum _sai_ingress_priority_group_attr_t
     /**
      * @brief End of attributes
      */
-    SAI_INGRESS_PRIORITY_GROUP_ATTR_END
+    SAI_INGRESS_PRIORITY_GROUP_ATTR_END,
+
+    /** Custom range base value */
+    SAI_INGRESS_PRIORITY_GROUP_CUSTOM_RANGE_START = 0x10000000,
+
+    /**
+     * @brief List of Shadow Priority Group Id's per XPE
+     * This PG OID will be used to get PG counter per XPE.
+     * Each PG can belongs to one or more XPE's in NPU.
+     * OID is valid only at index where XPE is valid for that PG else it is NULL.
+     * Example:
+     *   NPU can have 4 XPE's (0,1,2,3). If PG belongs to XPE1, XPE2.
+     * This list will looks like
+     *   Index 0 - SAI_OBJECT_ID_NULL
+     *   Index 1 - Shadow PG OID-1
+     *   Index 2 - Shadow PG OID-2
+     *   Index 3 - SAI_OBJECT_ID_NULL
+     *
+     * @type sai_object_list_t
+     * @flags READ_ONLY
+     * @objects SAI_OBJECT_TYPE_PRIORITY_GROUP
+     */
+    SAI_INGRESS_PRIORITY_GROUP_ATTR_SHADOW_PG_LIST,
+
+    /** End of custom range base */
+    SAI_INGRESS_PRIORITY_GROUP_CUSTOM_RANGE_END
 
 } sai_ingress_priority_group_attr_t;
 
@@ -263,6 +288,15 @@ typedef enum _sai_buffer_pool_attr_t
     /** Custom range base value */
     SAI_BUFFER_POOL_ATTR_CUSTOM_RANGE_START = 0x10000000,
 
+    /**
+     * @brief List of Shadow pool Id's for buffer pool
+     *
+     * @type sai_object_list_t
+     * @flags READ_ONLY
+     * @objects SAI_OBJECT_TYPE_BUFFER_POOL
+     */
+    SAI_BUFFER_POOL_ATTR_SHADOW_POOL_LIST,
+
     /** End of custom range base */
     SAI_BUFFER_POOL_ATTR_CUSTOM_RANGE_END
 
@@ -281,6 +315,12 @@ typedef enum _sai_buffer_pool_stat_t
 
     /** Get count of packets dropped in this pool [uint64_t] */
     SAI_BUFFER_POOL_STAT_DROPPED_PACKETS = 0x00000002,
+
+    /** Get current Shared headroom pool occupancy in bytes [uint64_t] */
+    SAI_BUFFER_POOL_STAT_XOFF_ROOM_CURR_OCCUPANCY_BYTES = 0x00000003,
+
+    /** Get watermark current Shared headroom pool occupancy in bytes [uint64_t] */
+    SAI_BUFFER_POOL_STAT_XOFF_ROOM_WATERMARK_BYTES = 0x00000004,
 
     /** Custom range base value */
     SAI_BUFFER_POOL_STAT_CUSTOM_RANGE_BASE = 0x10000000

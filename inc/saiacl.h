@@ -939,9 +939,18 @@ typedef enum _sai_acl_table_attr_t
     SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER,
 
     /**
+     * @brief Packet is flagged to be dropped in pipeline.
+     *
+     * @type bool
+     * @flags CREATE_ONLY
+     * @default false
+     */
+    SAI_ACL_TABLE_ATTR_FIELD_DROP_MARKED,
+
+    /**
      * @brief End of ACL Table Match Field
      */
-    SAI_ACL_TABLE_ATTR_FIELD_END = SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER,
+    SAI_ACL_TABLE_ATTR_FIELD_END = SAI_ACL_TABLE_ATTR_FIELD_DROP_MARKED,
 
     /**
      * @brief Custom range base value start
@@ -952,7 +961,6 @@ typedef enum _sai_acl_table_attr_t
      * Vendor extension. To be removed once NAS implementation is one.
      */
     SAI_ACL_TABLE_ATTR_PRIORITY = SAI_ACL_TABLE_ATTR_CUSTOM_RANGE_START,
-
 
     SAI_ACL_TABLE_ATTR_GROUP_ID,
     /**
@@ -1464,9 +1472,17 @@ typedef enum _sai_acl_entry_attr_t
     SAI_ACL_ENTRY_ATTR_FIELD_IPV6_NEXT_HEADER,
 
     /**
+     * @brief Packets marked to be dropped in pipeline.
+     *
+     * @type sai_acl_field_data_t bool
+     * @flags CREATE_AND_SET
+     */
+    SAI_ACL_ENTRY_ATTR_FIELD_DROP_MARKED,
+
+    /**
      * @brief End of Rule Match Fields
      */
-    SAI_ACL_ENTRY_ATTR_FIELD_END = SAI_ACL_ENTRY_ATTR_FIELD_IPV6_NEXT_HEADER,
+    SAI_ACL_ENTRY_ATTR_FIELD_END = SAI_ACL_ENTRY_ATTR_FIELD_DROP_MARKED,
 
     /*
      * Actions [sai_acl_action_data_t]
