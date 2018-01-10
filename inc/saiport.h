@@ -544,15 +544,6 @@ typedef enum _sai_port_attr_t
     SAI_PORT_ATTR_DEFAULT_VLAN_PRIORITY,
 
     /**
-     * @brief Ingress Filtering (Drop Frames with Unknown VLANs)
-     *
-     * @type bool
-     * @flags CREATE_AND_SET
-     * @default false
-     */
-    SAI_PORT_ATTR_INGRESS_FILTERING,
-
-    /**
      * @brief Dropping of untagged frames on ingress
      *
      * @type bool
@@ -587,15 +578,6 @@ typedef enum _sai_port_attr_t
      * @default SAI_PORT_FEC_MODE_NONE
      */
     SAI_PORT_ATTR_FEC_MODE,
-
-    /**
-     * @brief FDB Learning mode
-     *
-     * @type sai_port_fdb_learning_mode_t
-     * @flags CREATE_AND_SET
-     * @default SAI_PORT_FDB_LEARNING_MODE_HW
-     */
-    SAI_PORT_ATTR_FDB_LEARNING_MODE,
 
     /**
      * @brief Update DSCP of outgoing packets
@@ -663,25 +645,6 @@ typedef enum _sai_port_attr_t
      * @default SAI_PORT_FLOW_CONTROL_MODE_DISABLE
      */
     SAI_PORT_ATTR_GLOBAL_FLOW_CONTROL_MODE,
-
-    /**
-     * @brief Maximum number of learned MAC addresses
-     *
-     * @type sai_uint32_t
-     * @flags CREATE_AND_SET
-     * @default 0
-     */
-    SAI_PORT_ATTR_MAX_LEARNED_ADDRESSES,
-
-    /**
-     * @brief Action for packets with unknown source mac address
-     * when FDB learning limit is reached.
-     *
-     * @type sai_packet_action_t
-     * @flags CREATE_AND_SET
-     * @default SAI_PACKET_ACTION_DROP
-     */
-    SAI_PORT_ATTR_FDB_LEARNING_LIMIT_VIOLATION_PACKET_ACTION,
 
     /**
      * @brief Port bind point for ingress ACL object

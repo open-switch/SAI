@@ -148,6 +148,25 @@ typedef enum _sai_queue_attr_t
     /** Custom range base value */
     SAI_QUEUE_ATTR_CUSTOM_RANGE_START = 0x10000000,
 
+    /**
+     * @brief List of Shadow Queue Id's per XPE
+     * This Queue OID will be used to get queue counter per XPE.
+     * Each queue can belongs to one or more XPE's in NPU.
+     * OID is valid only at index where XPE is valid for that queue else it is NULL.
+     * Example:
+     *   NPU can have 4 XPE's (0,1,2,3). If Queue belongs to XPE1, XPE2.
+     * This list will looks like
+     *   Index 0 - SAI_OBJECT_ID_NULL
+     *   Index 1 - Shadow Queue OID-1
+     *   Index 2 - Shadow Queue OID-2
+     *   Index 3 - SAI_OBJECT_ID_NULL
+     *
+     * @type sai_object_list_t
+     * @flags READ_ONLY
+     * @objects SAI_OBJECT_TYPE_QUEUE
+     */
+    SAI_QUEUE_ATTR_SHADOW_QUEUE_LIST,
+
     /** End of custom range base */
     SAI_QUEUE_ATTR_CUSTOM_RANGE_END
 
