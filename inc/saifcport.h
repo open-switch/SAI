@@ -12,8 +12,7 @@
 * @file saifcport.h
 *
 * @brief This file defines SAI FC Port functionality API
-* @description Supported only Dell Inc. SAI Implementation
-* @warning This module is a SAI extension module
+* @warning This module is a SAI extension module and is only supported by the Dell Inc. SAI Implementation
 *
 *************************************************************************/
 
@@ -104,9 +103,12 @@ typedef enum _sai_fc_port_media_type_t
 
 /**
  * @brief Attribute data for SAI_FC_PORT_Attribute data for
- * SAI_FC_PORT_ATTR_MEDIA_SPEED_CAPABILITY
+ * SAI_FC_PORT_ATTR_MEDIA_SPEED_CAP
+ * @flags Contains flags
  */
-typedef enum _sai_fc_port_media_speed_capability_t {
+typedef enum _sai_fc_port_media_speed_cap_t {
+    /** Media speed undefined */
+    SAI_FC_MEDIA_CAP_SPEED_UNDEF = 0,
     /** Media speed 4G */
     SAI_FC_MEDIA_CAP_SPEED_FOUR_GIG          = (1 << 0),
 
@@ -120,7 +122,7 @@ typedef enum _sai_fc_port_media_speed_capability_t {
     SAI_FC_MEDIA_CAP_SPEED_THIRTY_TWO_GIG    = (1 << 3),
 
     SAI_FC_PORT_CAP_SPEED_MAX             = (1 << 4),
-} sai_fc_port_media_speed_capability_t;
+} sai_fc_port_media_speed_cap_t;
 
 /**
  * @brief Attribute Id in sai_set_fc_port_attribute() and
@@ -207,17 +209,18 @@ typedef enum _sai_fc_port_attr_t
     /**
      * @brief FC Media speed capability
      *
-     * @typesai_fc_port_media_speed_capability_t
+     * @type sai_fc_port_media_speed_cap_t
      * @flags CREATE_AND_SET
+     * @default SAI_FC_MEDIA_CAP_SPEED_UNDEF
      */
-    SAI_FC_PORT_ATTR_MEDIA_SPEED_CAPB,
+    SAI_FC_PORT_ATTR_MEDIA_SPEED_CAP,
 
     /**
      * @brief BB Credit value
      *
      * @type sai_uint32_t
      * @flags CREATE_AND_SET
-     * @default false
+     * @default 0
      */
     SAI_FC_PORT_ATTR_BB_CREDIT,
 
@@ -226,7 +229,7 @@ typedef enum _sai_fc_port_attr_t
      *
      * @type sai_uint32_t
      * @flags CREATE_AND_SET
-     * @default false
+     * @default 0
      */
     SAI_FC_PORT_ATTR_BB_CREDIT_RECOVERY,
 
@@ -244,7 +247,7 @@ typedef enum _sai_fc_port_attr_t
      *
      * @type bool
      * @flags CREATE_AND_SET
-     * @default SAI_PORT_FLOW_CONTROL_MODE_DISABLE
+     * @default false
      */
     SAI_FC_PORT_ATTR_FLOW_CONTROL_ENABLE,
 
@@ -253,14 +256,16 @@ typedef enum _sai_fc_port_attr_t
      *
      * @type  sai_fc_map_mac_mode_t
      * @flags CREATE_AND_SET
+     * @default SAI_FC_MAP_MAC_NULL_MODE
      */
-    SAI_FC_PORT_ATTR_MAP_SRC_MAC_MODE,
+    SAI_FC_PORT_ATTR_SRC_FC_MAP_MAC_MODE,
 
     /**
      * @brief MAP prefix for FCMAP SRC MAC address
      *
      * @type  sai_uint32_t
      * @flags CREATE_AND_SET
+     * @default 0
      */
     SAI_FC_PORT_ATTR_SRC_MAP_PREFIX,
 
@@ -268,7 +273,7 @@ typedef enum _sai_fc_port_attr_t
      * @brief FCMAP SRC MAC address
      *
      * @type  sai_mac_t
-     * @flags CREATE_AND_SET
+     * @flags MANDATORY_ON_CREATE | CREATE_AND_SET
      */
     SAI_FC_PORT_ATTR_INGRESS_SRC_MAC,
 
@@ -277,14 +282,16 @@ typedef enum _sai_fc_port_attr_t
      *
      * @type  sai_fc_map_mac_mode_t
      * @flags CREATE_AND_SET
+     * @default SAI_FC_MAP_MAC_NULL_MODE
      */
-    SAI_FC_PORT_ATTR_DST_MAC_MODE,
+    SAI_FC_PORT_ATTR_DST_FC_MAP_MAC_MODE,
 
     /**
      * @brief MAP prefix for FCMAP DST MAC address
      *
      * @type  sai_uint32_t
      * @flags CREATE_AND_SET
+     * @default 0
      */
     SAI_FC_PORT_ATTR_DST_MAP_PREFIX,
 
@@ -292,7 +299,7 @@ typedef enum _sai_fc_port_attr_t
      * @brief FCMAP DST MAC address
      *
      * @type  sai_mac_t
-     * @flags CREATE_AND_SET
+     * @flags MANDATORY_ON_CREATE | CREATE_AND_SET
      */
     SAI_FC_PORT_ATTR_INGRESS_DST_MAC,
 
@@ -301,13 +308,15 @@ typedef enum _sai_fc_port_attr_t
      *
      * @type  sai_uint32_t
      * @flags CREATE_AND_SET
+     * @default 0
      */
     SAI_FC_PORT_ATTR_VLAN_ID,
 
     /**
-     * brief FCMAP VLAN PCP
+     * @brief FCMAP VLAN PCP
      * @type  sai_uint32_t
      * @flags CREATE_AND_SET
+     * @default 0
      */
     SAI_FC_PORT_ATTR_PCP,
 
@@ -316,6 +325,7 @@ typedef enum _sai_fc_port_attr_t
      *
      * @type  sai_uint32_t
      * @flags CREATE_AND_SET
+     * @default 0
      */
     SAI_FC_PORT_ATTR_DEFAULT_VFT,
 
@@ -324,8 +334,13 @@ typedef enum _sai_fc_port_attr_t
      */
     SAI_FC_PORT_ATTR_END,
 
-} sai_fc_port_attr;
+    /** Custom range base value */
+    SAI_FC_PORT_ATTR_CUSTOM_RANGE_START = 0x10000000,
 
+    /** End of custom range base */
+    SAI_FC_PORT_ATTR_CUSTOM_RANGE_END
+
+} sai_fc_port_attr_t;
 
 /**
  * @brief Port counter IDs in sai_get_port_stats() call
@@ -397,8 +412,8 @@ typedef enum _sai_fc_port_counter_t
     SAI_FC_PORT_CLASSF_TX_BYTES,
     SAI_FC_PORT_TOTAL_RX_FRAMES,
     SAI_FC_PORT_TOTAL_TX_FRAMES,
-    SAI_FC_PORT_TOTAL_ERRORS,
-    SAI_FC_PORT_MAX_COUNTERS = SAI_FC_PORT_TOTAL_ERRORS,
+    SAI_FC_PORT_MAX_COUNTERS,
+#define SAI_FC_PORT_TOTAL_ERRORS (SAI_FC_PORT_MAX_COUNTERS)
 
 } sai_fc_port_counter_t;
 
@@ -406,13 +421,15 @@ typedef enum _sai_fc_port_counter_t
  * @brief Create FC port object
  *
  * @param[out] port_id Port id
+ * @param[in] fc_switch_id Fibre Channel Switch id
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
  * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
-typedef sai_status_t (*sai_fc_port_create_fn)(
+typedef sai_status_t (*sai_create_fc_port_fn)(
     _Out_ sai_object_id_t *port_id,
+    _In_ sai_object_id_t fc_switch_id,
     _In_ uint32_t attr_count,
     _In_ const sai_attribute_t *attr_list);
 
@@ -424,7 +441,7 @@ typedef sai_status_t (*sai_fc_port_create_fn)(
  *
  * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
-typedef sai_status_t (*sai_fc_port_remove_fn)(
+typedef sai_status_t (*sai_remove_fc_port_fn)(
     _In_ sai_object_id_t portId
 );
 
@@ -492,6 +509,7 @@ typedef sai_status_t (*sai_clear_fc_port_stats_fn)(
 
 /**
  * @brief Port state change notification
+ * @count data[count]
  *
  * Passed as a parameter into sai_initialize_switch()
  *
@@ -500,16 +518,15 @@ typedef sai_status_t (*sai_clear_fc_port_stats_fn)(
  */
 typedef void (*sai_fc_port_state_change_notification_fn)(
     _In_ uint32_t count,
-    _In_ sai_fc_port_oper_status_notification_t *data
-    );
+    _In_ sai_fc_port_oper_status_notification_t *data);
 
 /**
  * @brief FC Port methods table retrieved with sai_api_query()
  */
 typedef struct _sai_fc_port_api_t
 {
-    sai_fc_port_create_fn              fc_port_create_fn;
-    sai_fc_port_remove_fn              fc_port_remove_fn;
+    sai_create_fc_port_fn              create_fc_port;
+    sai_remove_fc_port_fn              remove_fc_port;
     sai_set_fc_port_attribute_fn       set_fc_port_attribute;
     sai_get_fc_port_attribute_fn       get_fc_port_attribute;
     sai_get_fc_port_stats_fn           get_fc_port_stats;

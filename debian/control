@@ -9,5 +9,5 @@ Vcs-Git: https://github.com/open-switch/opx-sai-api.git
 
 Package: opx-sai-api-dev
 Architecture: any
-Depends:
+Depends: ${shlibs:Depends}
 Description: This package contains SAI API Module

@@ -22,7 +22,7 @@
 
 sai_status_t sai_api_initialize(
         _In_ uint64_t flags,
-        _In_ const service_method_table_t *services) 
+        _In_ const sai_service_method_table_t *services)
 {
     return SAI_STATUS_NOT_IMPLEMENTED;
 }

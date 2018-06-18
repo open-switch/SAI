@@ -30,37 +30,41 @@
 #include "saibuffer.h"
 #include "saifdb.h"
 #include "saihash.h"
-#include "saihostintf.h"
+#include "saihostif.h"
 #include "saiipmcgroup.h"
 #include "saiipmc.h"
 #include "sail2mcgroup.h"
 #include "sail2mc.h"
 #include "sailag.h"
-#include "saimcfdb.h"
+#include "saimcastfdb.h"
 #include "saimirror.h"
+#include "saimpls.h"
 #include "saineighbor.h"
 #include "sainexthopgroup.h"
 #include "sainexthop.h"
 #include "saiobject.h"
 #include "saipolicer.h"
 #include "saiport.h"
-#include "saiqosmaps.h"
+#include "saiqosmap.h"
 #include "saiqueue.h"
 #include "sairoute.h"
-#include "sairouterintf.h"
+#include "sairouterinterface.h"
 #include "sairpfgroup.h"
 #include "saisamplepacket.h"
 #include "saischedulergroup.h"
 #include "saischeduler.h"
+#include "saisegmentroute.h"
 #include "saistatus.h"
 #include "saistp.h"
 #include "saiswitch.h"
+#include "saitam.h"
 #include "saitunnel.h"
 #include "saitypes.h"
 #include "saiudf.h"
-#include "sairouter.h"
+#include "saivirtualrouter.h"
 #include "saivlan.h"
 #include "saiwred.h"
+#include "saiuburst.h"
 
 /**
  * @defgroup SAI SAI - Entry point specific API definitions.
@@ -70,6 +74,7 @@
 
 /**
  * @brief Defined API sets have assigned IDs.
+ * @flags Contains flags
  *
  * If specific API method table changes in any way (method signature, number of
  * methods), a new ID needs to be created (e.g. VLAN2) and old API still may
@@ -89,18 +94,18 @@ typedef enum _sai_api_t
     SAI_API_ROUTER_INTERFACE =  9, /**< sai_router_interface_api_t */
     SAI_API_NEIGHBOR         = 10, /**< sai_neighbor_api_t */
     SAI_API_ACL              = 11, /**< sai_acl_api_t */
-    SAI_API_HOST_INTERFACE   = 12, /**< sai_host_interface_api_t */
+    SAI_API_HOSTIF           = 12, /**< sai_hostif_api_t */
     SAI_API_MIRROR           = 13, /**< sai_mirror_api_t */
     SAI_API_SAMPLEPACKET     = 14, /**< sai_samplepacket_api_t */
     SAI_API_STP              = 15, /**< sai_stp_api_t */
     SAI_API_LAG              = 16, /**< sai_lag_api_t */
     SAI_API_POLICER          = 17, /**< sai_policer_api_t */
     SAI_API_WRED             = 18, /**< sai_wred_api_t */
-    SAI_API_QOS_MAPS         = 19, /**< sai_qos_map_api_t */
+    SAI_API_QOS_MAP          = 19, /**< sai_qos_map_api_t */
     SAI_API_QUEUE            = 20, /**< sai_queue_api_t */
     SAI_API_SCHEDULER        = 21, /**< sai_scheduler_api_t */
     SAI_API_SCHEDULER_GROUP  = 22, /**< sai_scheduler_group_api_t */
-    SAI_API_BUFFERS          = 23, /**< sai_buffer_api_t */
+    SAI_API_BUFFER           = 23, /**< sai_buffer_api_t */
     SAI_API_HASH             = 24, /**< sai_hash_api_t */
     SAI_API_UDF              = 25, /**< sai_udf_api_t */
     SAI_API_TUNNEL           = 26, /**< sai_tunnel_api_t */
@@ -113,13 +118,16 @@ typedef enum _sai_api_t
     SAI_API_BRIDGE           = 33, /**< sai_bridge_api_t */
     SAI_API_TAM              = 34, /**< sai_tam_api_t */
     SAI_API_SEGMENTROUTE     = 35, /**< sai_segmentroute_api_t */
-    SAI_API_MAX              = 36, /**< total number of APIs */
+    SAI_API_MPLS             = 36, /**< sai_mpls_api_t */
+    SAI_API_UBURST           = 37, /**< sai_uburst_api_t */
+
+    /** @ignore */
+    SAI_API_MAX              = 38, /**< total number of APIs */
     SAI_API_CUSTOM_RANGE_START = 0x1000,
     /** Extension module provided by Dell Inc. SAI implementation */
     SAI_API_FC_SWITCH = SAI_API_CUSTOM_RANGE_START,
     SAI_API_FC_PORT,
     SAI_API_CUSTOM_RANGE_END,
-
 } sai_api_t;
 
 /**
@@ -147,18 +155,25 @@ typedef enum _sai_log_level_t
 
 } sai_log_level_t;
 
+typedef const char* (*sai_profile_get_value_fn)(
+        _In_ sai_switch_profile_id_t profile_id,
+        _In_ const char *variable);
+
+typedef int (*sai_profile_get_next_value_fn)(
+        _In_ sai_switch_profile_id_t profile_id,
+        _Out_ const char** variable,
+        _Out_ const char** value);
+
 /**
  * @brief Method table that contains function pointers for services exposed by
  * adapter host for adapter.
  */
-typedef struct _service_method_table_t
+typedef struct _sai_service_method_table_t
 {
     /**
      * @brief Get variable value given its name
      */
-    const char* (*profile_get_value)(
-            _In_ sai_switch_profile_id_t profile_id,
-            _In_ const char *variable);
+    sai_profile_get_value_fn        profile_get_value;
 
     /**
      * @brief Enumerate all the K/V pairs in a profile.
@@ -166,12 +181,9 @@ typedef struct _service_method_table_t
      * Pointer to NULL passed as variable restarts enumeration. Function
      * returns 0 if next value exists, -1 at the end of the list.
      */
-    int (*profile_get_next_value)(
-            _In_ sai_switch_profile_id_t profile_id,
-            _Out_ const char** variable,
-            _Out_ const char** value);
+    sai_profile_get_next_value_fn   profile_get_next_value;
 
-} service_method_table_t;
+} sai_service_method_table_t;
 
 /**
  * @brief Adapter module initialization call
@@ -185,7 +197,7 @@ typedef struct _service_method_table_t
  */
 sai_status_t sai_api_initialize(
         _In_ uint64_t flags,
-        _In_ const service_method_table_t *services);
+        _In_ const sai_service_method_table_t *services);
 
 /**
  * @brief Retrieve a pointer to the C-style method table for desired SAI
@@ -232,6 +244,19 @@ sai_status_t sai_log_set(
  * Otherwise, return a valid SAI object type SAI_OBJECT_TYPE_XXX.
  */
 sai_object_type_t sai_object_type_query(
+        _In_ sai_object_id_t sai_object_id);
+
+/**
+ * @brief Query SAI switch id.
+ *
+ * @param[in] sai_object_id Object id
+ *
+ * @return #SAI_NULL_OBJECT_ID when sai_object_id is not valid.
+ * Otherwise, return a valid SAI_OBJECT_TYPE_SWITCH object on which
+ * provided object id belongs. If valid switch id object is provided
+ * as input parameter it should return itself.
+ */
+sai_object_id_t sai_switch_id_query(
         _In_ sai_object_id_t sai_object_id);
 
 /**
