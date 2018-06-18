@@ -87,7 +87,6 @@ typedef enum _sai_vlan_flood_control_type_t
  * @brief Attribute Id in sai_set_vlan_attribute() and
  * sai_get_vlan_attribute() calls
  *
- * @flags Contains flags
  */
 typedef enum _sai_vlan_attr_t
 {
@@ -311,7 +310,7 @@ typedef enum _sai_vlan_attr_t
     SAI_VLAN_ATTR_UNKNOWN_UNICAST_FLOOD_GROUP,
 
     /**
-     * @brief Unknown unicast flood control type
+     * @brief Unknown multicast flood control type
      *
      * @type sai_vlan_flood_control_type_t
      * @flags CREATE_AND_SET

@@ -1,3 +1,18 @@
+opx-sai-api (35.1.0) unstable; urgency=medium
+
+  * Update: Upgrade to SAI 1.2
+  * Update: Support for OCP SAI verification tool
+  * Update: SAI metadata generation tool from OCP
+  * Feature: Global ECN Support for 4200
+
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Wed, 23 May 2018 11:45:33 -0800
+
+opx-sai-api (32.0.0+opx1) unstable; urgency=medium
+
+  * Update: Add compiler/linker hardening flags
+
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Thu, 17 May 2018 11:45:33 -0800
+
 opx-sai-api (32.0.0) unstable; urgency=medium
 
   * Update: Added vendor extension to get PG/Q mapping to XPE.

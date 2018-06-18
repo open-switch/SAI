@@ -547,6 +547,7 @@ TEST_F(vlanTest, vlan_port_priority_tag_test)
     sai_object_id_t vlan_obj_id = SAI_NULL_OBJECT_ID;
     sai_object_id_t vlan_mem_obj_id = SAI_NULL_OBJECT_ID;
     uint32_t attr_count = 0;
+    sai_status_t sai_rc;
 
     attr_count = 0;
     memset(&attr,0,sizeof(attr));
@@ -568,18 +569,20 @@ TEST_F(vlanTest, vlan_port_priority_tag_test)
     attr[attr_count].value.u32 = SAI_VLAN_TAGGING_MODE_PRIORITY_TAGGED;
     attr_count++;
 
-    EXPECT_EQ(SAI_STATUS_SUCCESS,
-              sai_vlan_api_table->create_vlan_member(&vlan_mem_obj_id,
+    sai_rc = sai_vlan_api_table->create_vlan_member(&vlan_mem_obj_id,
                                                     0,
                                                     attr_count,
-                                                    attr));
+                                                    attr);
 
-    EXPECT_EQ(SAI_STATUS_SUCCESS,
-              sai_vlan_api_table->remove_vlan_member(vlan_mem_obj_id));
+    if(sai_rc == SAI_STATUS_SUCCESS) {
+        EXPECT_EQ(SAI_STATUS_SUCCESS,
+                  sai_vlan_api_table->remove_vlan_member(vlan_mem_obj_id));
 
-    EXPECT_EQ(SAI_STATUS_ITEM_NOT_FOUND,
-              sai_vlan_api_table->remove_vlan_member(vlan_mem_obj_id));
-
+        EXPECT_EQ(SAI_STATUS_ITEM_NOT_FOUND,
+                  sai_vlan_api_table->remove_vlan_member(vlan_mem_obj_id));
+    } else {
+        printf("Create priority tagged returns error %d\r\n", sai_rc);
+    }
     ASSERT_EQ(SAI_STATUS_SUCCESS,
               sai_vlan_api_table->remove_vlan(vlan_obj_id));
 }
@@ -592,6 +595,7 @@ TEST_F(vlanTest, test_max_learnt_mac_address)
     sai_attribute_t get_attr;
     sai_attribute_t attr;
     sai_object_id_t vlan_obj_id = SAI_NULL_OBJECT_ID;
+    sai_status_t sai_rc;
 
     memset(&set_attr, 0, sizeof(sai_attribute_t));
     memset(&get_attr, 0, sizeof(sai_attribute_t));
@@ -604,14 +608,17 @@ TEST_F(vlanTest, test_max_learnt_mac_address)
     set_attr.id = SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES;
     set_attr.value.u32 = 100;
 
-    EXPECT_EQ(SAI_STATUS_SUCCESS,
-              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
-                                                   (const sai_attribute_t*)&set_attr));
+    sai_rc = sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&set_attr);
+    if(sai_rc == SAI_STATUS_SUCCESS) {
     get_attr.id = SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES;
     EXPECT_EQ(SAI_STATUS_SUCCESS,
               sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
                                                            &get_attr));
     EXPECT_EQ(set_attr.value.u32,get_attr.value.u32);
+    } else {
+        printf("Setting max learned address returns error %d\r\n",sai_rc);
+    }
     ASSERT_EQ(SAI_STATUS_SUCCESS,
               sai_vlan_api_table->remove_vlan(vlan_obj_id));
 }

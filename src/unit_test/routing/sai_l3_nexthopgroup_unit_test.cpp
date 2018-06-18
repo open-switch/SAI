@@ -198,7 +198,7 @@ void saiL3NextHopGroupTest::sai_test_setup_max_ecmp_paths (void)
 
     status  = saiL3Test::switch_api_tbl_get()->get_switch_attribute (switch_id,1, &attr);
 
-    ASSERT_TRUE (attr.value.u32 != max_ecmp_paths);
+    ASSERT_TRUE (attr.value.u32 == max_ecmp_paths);
 
     printf ("Setup Max ECMP Paths attribute to %d.\n", max_ecmp_paths);
 }
@@ -756,6 +756,11 @@ TEST_F (saiL3NextHopGroupTest, mandatory_attr_missing)
         create_next_hop_group_member (&member_id, saiL3Test::switch_id, index, attr);
 
     EXPECT_EQ (SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING, status);
+
+    status = sai_test_nh_group_remove (group_id);
+
+    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+
 }
 
 /*
@@ -816,6 +821,10 @@ TEST_F (saiL3NextHopGroupTest, invalid_attr_id)
 
     EXPECT_EQ ((sai_test_invalid_attr_status_code(SAI_STATUS_UNKNOWN_ATTRIBUTE_0,
                 invalid_nh_attr_pos)), status);
+
+    status = sai_test_nh_group_remove (group_id);
+
+    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
 }
 

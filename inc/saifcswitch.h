@@ -12,8 +12,7 @@
 * @file saifcswitch.h
 *
 * @brief This file defines SAI FC Switch functionality API
-* @description Supported only Dell Inc. SAI Implementation
-* @warning This module is a SAI extension module
+* @warning This module is a SAI extension module and is only supported in the Dell Inc. SAI Implementation
 *
 *************************************************************************/
 
@@ -72,7 +71,7 @@ typedef enum _sai_fc_switch_attr_t
      * @type sai_fc_switch_oper_status_t
      * @flags READ_ONLY
      */
-    SAI_FC_SWITCH_ATTR_OPER_STATUS,
+    SAI_FC_SWITCH_ATTR_OPER_STATUS = SAI_FC_SWITCH_ATTR_START,
 
     /**
      * @brief Set to switch initialization or connect to NPU/SDK.
@@ -90,7 +89,7 @@ typedef enum _sai_fc_switch_attr_t
     /**
      * @brief Set to switch profile id.
      *
-     * @type uint32_t
+     * @type sai_uint32_t
      * @flags MANDATORY_ON_CREATE | CREATE_ONLY
      */
     SAI_FC_SWITCH_ATTR_PROFILE_ID,
@@ -99,7 +98,7 @@ typedef enum _sai_fc_switch_attr_t
      * @brief Set struct for service method.
      *
      * @type sai_pointer_t
-     * @flags MANDATORY_ON_CREATE | CREATE_ONLY
+     * @flags MANDATORY_ON_CREATE | CREATE_AND_SET
      */
     SAI_FC_SWITCH_ATTR_SERVICE_METHOD,
 
@@ -107,18 +106,23 @@ typedef enum _sai_fc_switch_attr_t
      * @brief Set Switch Port state change notification callback function passed to the adapter.
      *
      * Use sai_fc_port_state_change_notification_fn as notification function.
+     * @type sai_pointer_t sai_fc_port_state_change_notification_fn
      *
-     * @type sai_pointer_t
      * @flags CREATE_AND_SET
      * @default NULL
      */
-    SAI_FC_SWITCH_ATTR_PORT_STATE_CHANGE_NOTIFY,
+    SAI_SWITCH_ATTR_FC_PORT_STATE_CHANGE_NOTIFY,
 
     /**
      * @brief End of attributes
      */
-    SAI_FC_SWITCH_ATTR_END
+    SAI_FC_SWITCH_ATTR_END,
 
+    /** Custom range base value */
+    SAI_FC_SWITCH_ATTR_CUSTOM_RANGE_START = 0x10000000,
+
+    /** End of custom range base */
+    SAI_FC_SWITCH_ATTR_CUSTOM_RANGE_END
 
 } sai_fc_switch_attr_t;
 
@@ -131,7 +135,8 @@ typedef enum _sai_fc_switch_attr_t
  *   ready for retrieval via sai_get_switch_attribute(). Same Switch Object id should be
  *   given for create/connect for each NPU.
  *
- * @param[out] switch_id The Switch Object ID
+ * @param[out] fc_switch_id The Fibre Channel Switch Object ID
+ * @param[in] switch_id Switch id
  * @param[in] attr_count number of attributes
  * @param[in] attr_list Array of attributes
  *
@@ -139,6 +144,7 @@ typedef enum _sai_fc_switch_attr_t
  */
 typedef sai_status_t(*sai_create_fc_switch_fn)(
         _Out_ sai_object_id_t* fc_switch_id,
+        _In_ sai_object_id_t switch_id,
         _In_ uint32_t attr_count,
         _In_ const sai_attribute_t *attr_list);
 
@@ -150,7 +156,7 @@ typedef sai_status_t(*sai_create_fc_switch_fn)(
  *
  * @return #SAI_STATUS_SUCCESS on success Failure status code on error
  */
-typedef void (*sai_remove_fc_switch_fn)(
+typedef sai_status_t(*sai_remove_fc_switch_fn)(
               _In_ sai_object_id_t fc_switch_id);
 
 /**

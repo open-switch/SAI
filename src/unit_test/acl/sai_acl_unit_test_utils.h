@@ -44,6 +44,7 @@ class saiACLTest : public ::testing::Test
         static sai_object_id_t sai_acl_bridge_port_id_get (uint32_t port_index);
         static sai_object_id_t sai_acl_invalid_port_id_get ();
         static sai_object_id_t sai_test_acl_get_cpu_port ();
+        static void sai_test_acl_api_table_populate(sai_acl_api_t* api_tbl);
 
         static sai_status_t sai_test_acl_table_switch_get (
                                         sai_attribute_t *p_attr_list,

@@ -592,10 +592,6 @@ TEST_F(lagInit, lag_member_new_api_test)
     ASSERT_EQ(SAI_STATUS_ITEM_NOT_FOUND,
               sai_lag_ut_remove_port_from_lag (sai_lag_api_table, 0));
 
-    /* Do not remove bridge port until all members are removed from lag */
-    ASSERT_EQ(SAI_STATUS_OBJECT_IN_USE,
-              sai_lag_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id, lag_bridge_port_id_1));
-
     ASSERT_EQ(SAI_STATUS_SUCCESS,
               sai_lag_ut_remove_port_from_lag (sai_lag_api_table, member_id_1));
 

@@ -23,6 +23,7 @@
 
 extern "C" {
 #include "sai_qos_unit_test_utils.h"
+#include "sai_acl_unit_test_utils.h"
 #include "sai.h"
 #include "saitypes.h"
 #include "saistatus.h"
@@ -48,6 +49,46 @@ static sai_object_id_t switch_id = 0;
 class wred : public ::testing::Test
 {
     protected:
+        static void EcnAclTableSetup()
+        {
+            sai_status_t ret = SAI_STATUS_SUCCESS;
+            /*
+             * Query and populate the SAI ACL API Table
+             */
+            EXPECT_EQ (SAI_STATUS_SUCCESS, sai_api_query (SAI_API_ACL,
+                      (static_cast<void**>(static_cast<void*>(&p_sai_acl_api_tbl)))));
+
+            ASSERT_TRUE (p_sai_acl_api_tbl != NULL);
+
+            sai_object_id_t acl_table_id = 0;
+            sai_object_id_t acl_rule_id = 0;
+            const uint64_t standard_mask = 0xffffffffffffffff;
+
+            saiACLTest :: sai_test_acl_api_table_populate(p_sai_acl_api_tbl);
+
+            ret = saiACLTest ::sai_test_acl_table_create (&acl_table_id, 7,
+                                                SAI_ACL_TABLE_ATTR_ACL_STAGE,
+                                                SAI_ACL_STAGE_INGRESS,
+                                                SAI_ACL_TABLE_ATTR_PRIORITY, 13,
+                                                SAI_ACL_TABLE_ATTR_FIELD_SRC_IP,
+                                                SAI_ACL_TABLE_ATTR_FIELD_DST_MAC,
+                                                SAI_ACL_TABLE_ATTR_FIELD_ETHER_TYPE,
+                                                SAI_ACL_TABLE_ATTR_FIELD_IN_PORT,
+                                                SAI_ACL_TABLE_ATTR_ACL_ACTION_TYPE_LIST, 1,
+                                                SAI_ACL_ACTION_TYPE_PACKET_ACTION
+                                                );
+            EXPECT_EQ (SAI_STATUS_SUCCESS, ret);
+
+            ret = saiACLTest ::sai_test_acl_rule_create (&acl_rule_id, 4,
+                                            SAI_ACL_ENTRY_ATTR_TABLE_ID, acl_table_id,
+                                            SAI_ACL_ENTRY_ATTR_PRIORITY, 15,
+                                            SAI_ACL_ENTRY_ATTR_ADMIN_STATE, true,
+                                            SAI_ACL_ENTRY_ATTR_FIELD_ETHER_TYPE,
+                                            1, 34825, standard_mask);
+
+            EXPECT_EQ (SAI_STATUS_SUCCESS, ret);
+        }
+
         static void SetUpTestCase()
         {
             ASSERT_EQ(SAI_STATUS_SUCCESS,sai_api_query(SAI_API_SWITCH,
@@ -97,8 +138,8 @@ class wred : public ::testing::Test
 
             ASSERT_TRUE(sai_wred_api_table != NULL);
 
-            EXPECT_TRUE(sai_wred_api_table->create_wred_profile != NULL);
-            EXPECT_TRUE(sai_wred_api_table->remove_wred_profile  != NULL);
+            EXPECT_TRUE(sai_wred_api_table->create_wred != NULL);
+            EXPECT_TRUE(sai_wred_api_table->remove_wred  != NULL);
             EXPECT_TRUE(sai_wred_api_table->set_wred_attribute != NULL);
             EXPECT_TRUE(sai_wred_api_table->get_wred_attribute != NULL);
 
@@ -133,9 +174,20 @@ class wred : public ::testing::Test
 
             ASSERT_EQ(SAI_STATUS_SUCCESS,ret);
 
-             EXPECT_TRUE(sai_port_api_table->get_port_stats != NULL);
+            EXPECT_TRUE(sai_port_api_table->get_port_stats != NULL);
 
             ASSERT_EQ(SAI_STATUS_SUCCESS, sai_queue_list_get());
+
+            /*Check if seperate ECN thresholds are supported*/
+            sai_attribute_t get_attr;
+            get_attr.id = SAI_SWITCH_ATTR_ECN_ECT_THRESHOLD_ENABLE;
+
+            ret = sai_switch_api_table->get_switch_attribute(switch_id, 1, &get_attr);
+            if(ret == SAI_STATUS_SUCCESS) {
+                /*To enable seperate ECN thresholds, we need to add rules in system
+                 *flow ACL table in dune*/
+                EcnAclTableSetup();
+            }
         }
 
         static sai_status_t sai_queue_list_get();
@@ -143,6 +195,7 @@ class wred : public ::testing::Test
         static sai_wred_api_t* sai_wred_api_table;
         static sai_queue_api_t* sai_queue_api_table;
         static sai_port_api_t* sai_port_api_table;
+        static sai_acl_api_t* p_sai_acl_api_tbl;
         static const unsigned int test_port_id = 3;
 };
 
@@ -150,6 +203,7 @@ sai_switch_api_t* wred ::sai_switch_api_table = NULL;
 sai_wred_api_t* wred ::sai_wred_api_table = NULL;
 sai_queue_api_t* wred ::sai_queue_api_table = NULL;
 sai_port_api_t* wred ::sai_port_api_table = NULL;
+sai_acl_api_t* wred ::p_sai_acl_api_tbl = NULL;
 
 sai_status_t wred::sai_queue_list_get()
 {
@@ -226,7 +280,7 @@ TEST_F(wred, wred_create_set)
     new_attr_list[attr_count].value.u32 = WRED_CREATE_MIN_VALUE;
 
     attr_count ++;
-    ASSERT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING, sai_wred_api_table->create_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
               (&wred_id1, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
 
     /* Creating MAX value alone without enabling */
@@ -235,7 +289,7 @@ TEST_F(wred, wred_create_set)
     new_attr_list[attr_count].value.u32 = WRED_CREATE_MAX_VALUE;
 
     attr_count ++;
-    ASSERT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING, sai_wred_api_table->create_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
             (&wred_id1, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
 
     /* Creating MIN and MAX value alone without enabling */
@@ -250,7 +304,7 @@ TEST_F(wred, wred_create_set)
 
     attr_count ++;
 
-    ASSERT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING, sai_wred_api_table->create_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
               (&wred_id1, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
 
     /* Creating the WRED profile successfully */
@@ -270,7 +324,7 @@ TEST_F(wred, wred_create_set)
 
     attr_count ++;
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
               (&wred_id1, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
 
     /* Associating with a queue */
@@ -311,7 +365,7 @@ TEST_F(wred, wred_create_set)
               (wred_id1,(const sai_attribute_t *)&set_attr));
 
     /* Removing the WRED profile when associated with queue */
-    ASSERT_EQ(SAI_STATUS_OBJECT_IN_USE, sai_wred_api_table->remove_wred_profile
+    ASSERT_EQ(SAI_STATUS_OBJECT_IN_USE, sai_wred_api_table->remove_wred
               (wred_id1));
 
     /* Disassociating from the queue */
@@ -322,7 +376,7 @@ TEST_F(wred, wred_create_set)
               (queue_id,(const sai_attribute_t *)&set_attr));
 
     /* Removing the WRED profile successfully */
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred
               (wred_id1));
 }
 
@@ -354,7 +408,7 @@ TEST_F(wred, yellow_profile_create)
 
     attr_count ++;
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
               (&wred_id1, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
 
     set_attr.id = SAI_WRED_ATTR_YELLOW_DROP_PROBABILITY;
@@ -393,7 +447,7 @@ TEST_F(wred, yellow_profile_create)
     ASSERT_EQ(SAI_STATUS_SUCCESS, sai_queue_api_table->set_queue_attribute
               (queue_id1,(const sai_attribute_t *)&set_attr));
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred
               (wred_id1));
 }
 
@@ -425,7 +479,7 @@ TEST_F(wred, red_profile_create)
 
     attr_count ++;
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
               (&wred_id1, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
 
     set_attr.id = SAI_WRED_ATTR_RED_DROP_PROBABILITY;
@@ -459,7 +513,7 @@ TEST_F(wred, red_profile_create)
     ASSERT_EQ(SAI_STATUS_SUCCESS, sai_queue_api_table->set_queue_attribute
               (queue_id,(const sai_attribute_t *)&set_attr));
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred
               (wred_id1));
 }
 
@@ -515,7 +569,7 @@ TEST_F(wred, two_profiles)
 
     attr_count ++;
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
               (&wred_id1, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
 
     attr_count = 0;
@@ -535,7 +589,7 @@ TEST_F(wred, two_profiles)
 
     attr_count ++;
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
               (&wred_id2, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
 
     set_attr.id = SAI_QUEUE_ATTR_WRED_PROFILE_ID;
@@ -564,7 +618,7 @@ TEST_F(wred, two_profiles)
     ASSERT_EQ(SAI_STATUS_SUCCESS, sai_queue_api_table->set_queue_attribute
               (queue_id[0],(const sai_attribute_t *)&set_attr));
 
-    ASSERT_EQ(SAI_STATUS_OBJECT_IN_USE, sai_wred_api_table->remove_wred_profile
+    ASSERT_EQ(SAI_STATUS_OBJECT_IN_USE, sai_wred_api_table->remove_wred
               (wred_id1));
 
     set_attr.id = SAI_QUEUE_ATTR_WRED_PROFILE_ID;
@@ -573,9 +627,9 @@ TEST_F(wred, two_profiles)
     ASSERT_EQ(SAI_STATUS_SUCCESS, sai_queue_api_table->set_queue_attribute
               (queue_id[1],(const sai_attribute_t *)&set_attr));
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred
               (wred_id1));
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred
               (wred_id2));
 }
 
@@ -660,7 +714,7 @@ TEST_F(wred, create_set_get)
     new_attr_list[attr_count].value.s32 = SAI_ECN_MARK_MODE_ALL;
     attr_count ++;
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
               (&wred_id1, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
 
     attr_count = 0;
@@ -731,9 +785,138 @@ TEST_F(wred, create_set_get)
     ASSERT_EQ(SAI_STATUS_SUCCESS, sai_queue_api_table->set_queue_attribute
               (queue_id[1],(const sai_attribute_t *)&set_attr));
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred_profile
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred
               (wred_id1));
 }
+
+TEST_F(wred, ecn_profile_create_set)
+{
+    sai_attribute_t new_attr_list[15];
+    sai_attribute_t set_attr;
+    sai_attribute_t get_attr;
+    sai_object_id_t wred_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t queue_id1 = queue_list[0];
+    unsigned int attr_count = 0;
+    sai_status_t sai_rc = SAI_STATUS_FAILURE;
+
+    get_attr.id = SAI_SWITCH_ATTR_ECN_ECT_THRESHOLD_ENABLE;
+
+    sai_rc = sai_switch_api_table->get_switch_attribute(switch_id, 1, &get_attr);
+    if(sai_rc == SAI_STATUS_NOT_SUPPORTED) {
+        LOG_PRINT("Skipping test case as seperate ECN thresholds is not"
+                  " supported\r\n");
+        return;
+    }
+
+    attr_count = 0;
+
+    new_attr_list[attr_count].id = SAI_WRED_ATTR_ECN_COLOR_UNAWARE_MIN_THRESHOLD;
+    new_attr_list[attr_count].value.u32 = 400;
+
+    attr_count ++;
+
+    new_attr_list[attr_count].id = SAI_WRED_ATTR_ECN_COLOR_UNAWARE_MAX_THRESHOLD;
+    new_attr_list[attr_count].value.u32 = 800;
+
+    attr_count ++;
+
+    new_attr_list[attr_count].id = SAI_WRED_ATTR_ECN_MARK_MODE;
+    new_attr_list[attr_count].value.s32 = SAI_ECN_MARK_MODE_NONE;
+
+    attr_count ++;
+
+    new_attr_list[attr_count].id = SAI_WRED_ATTR_YELLOW_ENABLE;
+    new_attr_list[attr_count].value.booldata = true;
+
+    attr_count ++;
+
+    new_attr_list[attr_count].id = SAI_WRED_ATTR_YELLOW_MIN_THRESHOLD;
+    new_attr_list[attr_count].value.u32 = 1500;
+
+    attr_count ++;
+
+    new_attr_list[attr_count].id = SAI_WRED_ATTR_YELLOW_MAX_THRESHOLD;
+    new_attr_list[attr_count].value.u32 = 2000;
+
+    attr_count ++;
+    new_attr_list[attr_count].id = SAI_WRED_ATTR_GREEN_ENABLE;
+    new_attr_list[attr_count].value.booldata = true;
+
+    attr_count ++;
+
+    new_attr_list[attr_count].id = SAI_WRED_ATTR_GREEN_MIN_THRESHOLD;
+    new_attr_list[attr_count].value.u32 = 5000;
+
+    attr_count ++;
+
+    new_attr_list[attr_count].id = SAI_WRED_ATTR_GREEN_MAX_THRESHOLD;
+    new_attr_list[attr_count].value.u32 = 22000;
+    attr_count ++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->create_wred
+              (&wred_id1, switch_id, attr_count, (const sai_attribute_t *)new_attr_list));
+
+    set_attr.id = SAI_QUEUE_ATTR_WRED_PROFILE_ID;
+    set_attr.value.oid = wred_id1;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_queue_api_table->set_queue_attribute
+              (queue_id1,(const sai_attribute_t *)&set_attr));
+
+    set_attr.id = SAI_WRED_ATTR_ECN_COLOR_UNAWARE_MARK_PROBABILITY;
+    set_attr.value.u32 = 56;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->set_wred_attribute
+              (wred_id1,(const sai_attribute_t *)&set_attr));
+
+    set_attr.id = SAI_WRED_ATTR_WEIGHT;
+    set_attr.value.u32 = 10;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->set_wred_attribute
+              (wred_id1,(const sai_attribute_t *)&set_attr));
+
+    set_attr.id = SAI_WRED_ATTR_YELLOW_ENABLE;
+    set_attr.value.booldata = false;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->set_wred_attribute
+              (wred_id1,(const sai_attribute_t *)&set_attr));
+
+    /*Enable ECN color unaware threshold*/
+    set_attr.id = SAI_WRED_ATTR_ECN_MARK_MODE;
+    set_attr.value.s32 = SAI_ECN_MARK_MODE_ALL;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->set_wred_attribute
+              (wred_id1,(const sai_attribute_t *)&set_attr));
+
+    /*Disable ECN color unaware threshold*/
+    set_attr.id = SAI_WRED_ATTR_ECN_MARK_MODE;
+    set_attr.value.s32 = SAI_ECN_MARK_MODE_NONE;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->set_wred_attribute
+              (wred_id1,(const sai_attribute_t *)&set_attr));
+
+    set_attr.id = SAI_SWITCH_ATTR_ECN_ECT_THRESHOLD_ENABLE;
+    set_attr.value.booldata = true;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_switch_api_table->set_switch_attribute
+              (switch_id,(const sai_attribute_t *)&set_attr));
+
+    set_attr.id = SAI_QUEUE_ATTR_WRED_PROFILE_ID;
+    set_attr.value.oid = SAI_NULL_OBJECT_ID;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_queue_api_table->set_queue_attribute
+              (queue_id1,(const sai_attribute_t *)&set_attr));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_wred_api_table->remove_wred
+              (wred_id1));
+
+    set_attr.id = SAI_SWITCH_ATTR_ECN_ECT_THRESHOLD_ENABLE;
+    set_attr.value.booldata = false;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_switch_api_table->set_switch_attribute
+              (switch_id, (const sai_attribute_t *)&set_attr));
+
+}
+
 
 /*
  * Apply a wred profile on port.
