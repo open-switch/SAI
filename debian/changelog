@@ -4,7 +4,6 @@ opx-sai-api (35.1.0) unstable; urgency=medium
   * Update: Support for OCP SAI verification tool
   * Update: SAI metadata generation tool from OCP
   * Feature: Global ECN Support for 4200
-  * Bugfix: Fix meta parser tool issues for FibreChannel objects
 
  -- Dell EMC <ops-dev@lists.openswitch.net>  Wed, 23 May 2018 11:45:33 -0800
 
