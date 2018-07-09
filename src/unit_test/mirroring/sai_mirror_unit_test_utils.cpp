@@ -163,6 +163,13 @@ void mirrorTest ::SetUpTestCase (void) {
 
     ASSERT_TRUE (p_sai_lag_api_table != NULL);
 
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_api_query
+               (SAI_API_BRIDGE, (static_cast<void**>
+                                         (static_cast<void*>
+                                          (&p_sai_bridge_api_tbl)))));
+
+    ASSERT_TRUE (p_sai_bridge_api_tbl != NULL);
+
     sai_attribute_t sai_port_attr;
     sai_status_t ret = SAI_STATUS_SUCCESS;
 
@@ -204,6 +211,7 @@ sai_mirror_api_t* mirrorTest ::p_sai_mirror_api_tbl = NULL;
 sai_acl_api_t* mirrorTest ::p_sai_acl_api_tbl = NULL;
 sai_vlan_api_t* mirrorTest ::p_sai_vlan_api_tbl = NULL;
 sai_lag_api_t* mirrorTest ::p_sai_lag_api_table = NULL;
+sai_bridge_api_t* mirrorTest ::p_sai_bridge_api_tbl = NULL;
 sai_object_id_t mirrorTest ::sai_mirror_first_port = 0;
 sai_object_id_t mirrorTest ::sai_mirror_second_port = 0;
 sai_object_id_t mirrorTest ::sai_mirror_third_port = 0;

@@ -10,13 +10,13 @@
 #include "gtest/gtest.h"
 #include "stdarg.h"
 #include "sai_mirror_unit_test.h"
+#include "sai_bridge_unit_test_utils.h"
 
 extern "C" {
 #include "sai.h"
 #include "saiacl.h"
 #include "saistatus.h"
 #include "saitypes.h"
-#include "saiswitch.h"
 #include "saimirror.h"
 }
 #define SAI_LOCAL_SPAN_NO_OF_MANDAT_ATTRIB 2
@@ -100,22 +100,41 @@ TEST_F(mirrorTest, span_lag_set) {
     sai_object_id_t  session_id = 0;
     sai_attribute_t attr[SAI_LOCAL_SPAN_NO_OF_MANDAT_ATTRIB + 1] = {0};
     sai_object_id_t lag_id = 0;
-    sai_object_id_t port_arr[2];
-    sai_object_list_t lag_port_list;
-    sai_attribute_t lag_attr;
     sai_object_list_t obj_list;
     sai_object_id_t *sessions = NULL;
+    sai_object_id_t bridge_port_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t member_id_1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t member_id_2 = SAI_NULL_OBJECT_ID;
 
-    lag_port_list.count = 2;
-    port_arr[0] = sai_monitor_port;
-    port_arr[1] = sai_second_monitor_port;
-    lag_port_list.list = port_arr;
 
-    lag_attr.id = SAI_LAG_ATTR_PORT_LIST;
-    lag_attr.value.objlist = lag_port_list;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_bridge_ut_get_bridge_port_from_port(p_sai_switch_api_tbl, p_sai_bridge_api_tbl,
+                                                  switch_id, sai_monitor_port, &bridge_port_id));
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                                                  bridge_port_id, true));
+
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_bridge_ut_get_bridge_port_from_port(p_sai_switch_api_tbl, p_sai_bridge_api_tbl,
+                                                  switch_id, sai_second_monitor_port, &bridge_port_id));
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                                                  bridge_port_id, true));
+
 
     EXPECT_EQ (SAI_STATUS_SUCCESS,
-                  p_sai_lag_api_table->create_lag(&lag_id, switch_id, 1, &lag_attr));
+                  p_sai_lag_api_table->create_lag(&lag_id, switch_id, 0, NULL));
+
+    attr[0].id =  SAI_LAG_MEMBER_ATTR_LAG_ID;
+    attr[0].value.oid = lag_id;
+    attr[1].id =  SAI_LAG_MEMBER_ATTR_PORT_ID;
+    attr[1].value.oid = sai_monitor_port;
+
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              p_sai_lag_api_table->create_lag_member (&member_id_1, switch_id, 2, attr));
+
+    attr[1].value.oid = sai_second_monitor_port;
+
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              p_sai_lag_api_table->create_lag_member (&member_id_2, switch_id, 2, attr));
 
     attr[0].id =  SAI_MIRROR_SESSION_ATTR_MONITOR_PORT;
     attr[0].value.oid = lag_id;
@@ -150,6 +169,12 @@ TEST_F(mirrorTest, span_lag_set) {
     sai_rc = sai_test_mirror_session_destroy (session_id);
 
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    EXPECT_EQ (SAI_STATUS_SUCCESS,
+                  p_sai_lag_api_table->remove_lag_member(member_id_1));
+
+    EXPECT_EQ (SAI_STATUS_SUCCESS,
+                  p_sai_lag_api_table->remove_lag_member(member_id_2));
 
     EXPECT_EQ (SAI_STATUS_SUCCESS,
                   p_sai_lag_api_table->remove_lag(lag_id));
