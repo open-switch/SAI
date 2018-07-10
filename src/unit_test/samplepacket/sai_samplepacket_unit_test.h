@@ -41,6 +41,10 @@ class samplepacketTest : public ::testing::Test
         static sai_object_id_t port_id_1;
         static sai_object_id_t port_id_2;
         static sai_object_id_t switch_id;
+        static bool ing_port_support;
+        static bool egr_port_support;
+        static bool ing_flow_support;
+        static bool egr_flow_support;
 
 };
 #endif /* __SAI_SAMPLEPACKET_UNIT_TEST_H__ */

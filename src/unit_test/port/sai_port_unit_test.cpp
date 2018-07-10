@@ -1387,6 +1387,33 @@ TEST_F(portTest, all_stats_get)
     }
 }
 
+
+/*
+ * Port ip statistics Get: Tests only the support of statistics counters;
+ * not the stats collection functionality
+ */
+TEST_F(portTest, ip_stats_get)
+{
+    uint64_t counters[1] = {0};
+    int32_t counter = 0;
+    sai_port_stat_t counter_ids[1];
+    sai_status_t status = SAI_STATUS_FAILURE;
+
+    for(counter = SAI_PORT_STAT_IP_IN_HDR_ERRORS;
+        counter <= SAI_PORT_STAT_IPV6_OUT_FORW_DATAGRAMS; counter++)
+    {
+        counter_ids[0] = (sai_port_stat_t)counter;
+        status = sai_port_api_table->get_port_stats(gport_id, 1, counter_ids, counters);
+
+        if(status == SAI_STATUS_SUCCESS) {
+            LOG_PRINT("port 0x%" PRIx64 " stat id %d value is %ld \r\n", gport_id, counter_ids[0], counters[0]);
+        } else if (status == (SAI_STATUS_ATTR_NOT_SUPPORTED_0 + counter)) {
+            LOG_PRINT("port 0x%" PRIx64 " stat id %d not implemented \r\n", gport_id, counter_ids[0]);
+        }
+
+        EXPECT_EQ(SAI_STATUS_SUCCESS, status);
+    }
+}
 /*
  * Port EEE Statistics Get: Tests only the copper port EEE statistics counters;
  * not the stats collection functionality
@@ -1478,6 +1505,30 @@ TEST_F(portTest, port_stat_clear)
     }
 }
 
+/*
+ * Clear port's ip statistic counters one by one
+ */
+TEST_F(portTest, ip_stat_clear)
+{
+    int32_t counter = 0;
+    sai_port_stat_t counter_ids[1];
+    sai_status_t status = SAI_STATUS_FAILURE;
+
+    for(counter = SAI_PORT_STAT_IP_IN_HDR_ERRORS;
+        counter <= SAI_PORT_STAT_IPV6_OUT_FORW_DATAGRAMS; counter++)
+    {
+        counter_ids[0] = (sai_port_stat_t)counter;
+        status = sai_port_api_table->clear_port_stats(gport_id, 1, counter_ids);
+
+        if(status == SAI_STATUS_SUCCESS) {
+            LOG_PRINT("port 0x%" PRIx64 " stat id %d \r\n", gport_id, counter_ids[0]);
+        } else if (status == (SAI_STATUS_ATTR_NOT_SUPPORTED_0 + counter)) {
+            LOG_PRINT("port 0x%" PRIx64 " stat id %d not implemented \r\n", gport_id, counter_ids[0]);
+        }
+
+        EXPECT_EQ(SAI_STATUS_SUCCESS, status);
+    }
+}
 /*
  * Clear port's all statistic counters at one shot
  */

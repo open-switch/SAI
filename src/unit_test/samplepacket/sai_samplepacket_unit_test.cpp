@@ -50,25 +50,31 @@ TEST_F(samplepacketTest, sample_set) {
     memset (attr, 0, sizeof(attr));
 
     sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, session_id);
+    if(sai_rc != SAI_STATUS_SUCCESS) {
+        ing_port_support = false;
+    }
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    if(ing_port_support) {
+        port_attr.id = SAI_PORT_ATTR_INGRESS_SAMPLEPACKET_ENABLE;
 
-    port_attr.id = SAI_PORT_ATTR_INGRESS_SAMPLEPACKET_ENABLE;
+        sai_rc = p_sai_port_api_tbl->get_port_attribute (samplepacket_port, 1, &port_attr);
 
-    sai_rc = p_sai_port_api_tbl->get_port_attribute (samplepacket_port, 1, &port_attr);
-
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-    EXPECT_EQ (port_attr.value.oid, session_id);
-
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (port_attr.value.oid, session_id);
+    }
     sai_rc = sai_test_samplepacket_session_egress_port_add (samplepacket_port, session_id);
+    if(sai_rc != SAI_STATUS_SUCCESS) {
+        egr_port_support = false;
+    }
 
-    port_attr.id = SAI_PORT_ATTR_EGRESS_SAMPLEPACKET_ENABLE;
+    if(egr_port_support) {
+        port_attr.id = SAI_PORT_ATTR_EGRESS_SAMPLEPACKET_ENABLE;
 
-    sai_rc = p_sai_port_api_tbl->get_port_attribute (samplepacket_port, 1, &port_attr);
+        sai_rc = p_sai_port_api_tbl->get_port_attribute (samplepacket_port, 1, &port_attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-    EXPECT_EQ (port_attr.value.oid, session_id);
-
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (port_attr.value.oid, session_id);
+    }
     attr[0].id =  SAI_SAMPLEPACKET_ATTR_SAMPLE_RATE;
     attr[0].value.oid = 1024;
     sai_rc = p_sai_samplepacket_api_tbl->set_samplepacket_attribute (session_id, attr);
@@ -101,20 +107,23 @@ TEST_F(samplepacketTest, sample_set) {
     EXPECT_EQ (attr[1].value.oid, 512);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
+    if(ing_port_support) {
+        sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    }
+    if(egr_port_support) {
+        sai_rc = sai_test_samplepacket_session_egress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
 
-    sai_rc = sai_test_samplepacket_session_egress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        port_attr.id = SAI_PORT_ATTR_EGRESS_SAMPLEPACKET_ENABLE;
 
-    port_attr.id = SAI_PORT_ATTR_EGRESS_SAMPLEPACKET_ENABLE;
+        sai_rc = p_sai_port_api_tbl->get_port_attribute (samplepacket_port, 1, &port_attr);
 
-    sai_rc = p_sai_port_api_tbl->get_port_attribute (samplepacket_port, 1, &port_attr);
-
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-    EXPECT_EQ (port_attr.value.oid, SAI_NULL_OBJECT_ID);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (port_attr.value.oid, SAI_NULL_OBJECT_ID);
+    }
 
     sai_rc = sai_test_samplepacket_session_destroy (session_id);
 
@@ -145,41 +154,45 @@ TEST_F(samplepacketTest, object_in_use) {
 
     memset (attr, 0, sizeof(attr));
 
-    sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, session_id);
+    if(ing_port_support) {
+        sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, session_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    port_attr.id = SAI_PORT_ATTR_INGRESS_SAMPLEPACKET_ENABLE;
+        port_attr.id = SAI_PORT_ATTR_INGRESS_SAMPLEPACKET_ENABLE;
 
-    sai_rc = p_sai_port_api_tbl->get_port_attribute (samplepacket_port, 1, &port_attr);
+        sai_rc = p_sai_port_api_tbl->get_port_attribute (samplepacket_port, 1, &port_attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-    EXPECT_EQ (port_attr.value.oid, session_id);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (port_attr.value.oid, session_id);
 
-    sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, session_id_dup);
+        sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, session_id_dup);
 
-    EXPECT_EQ (SAI_STATUS_OBJECT_IN_USE, sai_rc);
+        EXPECT_EQ (SAI_STATUS_OBJECT_IN_USE, sai_rc);
 
-    sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
+        sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
 
-    sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, session_id_dup);
+        sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, session_id_dup);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
+        sai_rc = sai_test_samplepacket_session_ingress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    }
 
-    sai_rc = sai_test_samplepacket_session_egress_port_add (samplepacket_port, session_id_dup);
+    if(egr_port_support) {
+        sai_rc = sai_test_samplepacket_session_egress_port_add (samplepacket_port, session_id_dup);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    sai_rc = sai_test_samplepacket_session_egress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
+        sai_rc = sai_test_samplepacket_session_egress_port_add (samplepacket_port, SAI_NULL_OBJECT_ID);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    }
     sai_rc = sai_test_samplepacket_session_destroy (session_id);
 
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
@@ -240,9 +253,15 @@ TEST_F(samplepacketTest, flow_based) {
     rule_attr[4].value.aclaction.enable = true;
     rule_attr[4].value.aclaction.parameter.oid = session_id;
     sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id, switch_id, 5, rule_attr);
+    if(sai_rc != SAI_STATUS_SUCCESS) {
+        printf("Ingress sai rc is %d\r\n", sai_rc);
+        ing_flow_support = false;
+    }
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id));
+    if(ing_flow_support) {
+        EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id));
+    }
     free (rule_attr[3].value.aclfield.data.objlist.list);
 
     /* Without INPORTS */
@@ -260,7 +279,9 @@ TEST_F(samplepacketTest, flow_based) {
     rule_attr[4].value.aclaction.enable = true;
     rule_attr[4].value.aclaction.parameter.oid = session_id;
     sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    if(sai_rc == SAI_STATUS_SUCCESS) {
+        EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id));
+    }
 
     /* Without INPORTS */
     rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
@@ -277,11 +298,13 @@ TEST_F(samplepacketTest, flow_based) {
     rule_attr[4].value.aclaction.enable = true;
     rule_attr[4].value.aclaction.parameter.oid = session_id;
     sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id2, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id));
-    EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id2));
-
+    if(sai_rc != SAI_STATUS_SUCCESS) {
+        egr_flow_support = false;
+    }
+    if(egr_flow_support) {
+        EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id2));
+    }
     EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_table (acl_table_id));
 
     sai_rc = sai_test_samplepacket_session_destroy (session_id);
@@ -300,6 +323,7 @@ TEST_F(samplepacketTest, flow_based_set) {
     sai_attribute_t table_attr[12] = {0};
     sai_status_t sai_rc = SAI_STATUS_SUCCESS;
     sai_attribute_t attr[SAI_SAMPLE_NO_OF_MANDAT_ATTRIB + 1] = {0};
+    int attr_idx = 0;
 
     attr[0].id =  SAI_SAMPLEPACKET_ATTR_SAMPLE_RATE;
     attr[0].value.u32 = 2048;
@@ -332,25 +356,35 @@ TEST_F(samplepacketTest, flow_based_set) {
                                                   table_attr);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
-    rule_attr[0].value.oid = acl_table_id;
-    rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
-    rule_attr[1].value.u32 = 1;
-    rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
-    rule_attr[2].value.booldata= true;
-    rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
-    rule_attr[3].value.aclfield.data.objlist.count = 1;
-    rule_attr[3].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
+    rule_attr[attr_idx].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
+    rule_attr[attr_idx].value.oid = acl_table_id;
+    attr_idx++;
+    rule_attr[attr_idx].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
+    rule_attr[attr_idx].value.u32 = 1;
+    attr_idx++;
+    rule_attr[attr_idx].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
+    rule_attr[attr_idx].value.booldata= true;
+    attr_idx++;
+    rule_attr[attr_idx].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
+    rule_attr[attr_idx].value.aclfield.data.objlist.count = 1;
+    rule_attr[attr_idx].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
                                                             1, sizeof(sai_object_id_t));
-    rule_attr[3].value.aclfield.data.objlist.list[0] = port_id_1;
-    rule_attr[3].value.aclfield.enable = true;
-    rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    rule_attr[4].value.aclaction.enable = true;
-    rule_attr[4].value.aclaction.parameter.oid = session_id;
-    rule_attr[5].id = SAI_ACL_ENTRY_ATTR_ACTION_EGRESS_SAMPLEPACKET_ENABLE;
-    rule_attr[5].value.aclaction.enable = true;
-    rule_attr[5].value.aclaction.parameter.oid = session_id;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id, switch_id, 6, rule_attr);
+    rule_attr[attr_idx].value.aclfield.data.objlist.list[0] = port_id_1;
+    rule_attr[attr_idx].value.aclfield.enable = true;
+    attr_idx++;
+    if(ing_flow_support) {
+        rule_attr[attr_idx].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        rule_attr[attr_idx].value.aclaction.enable = true;
+        rule_attr[attr_idx].value.aclaction.parameter.oid = session_id;
+        attr_idx++;
+    }
+    if(egr_flow_support) {
+        rule_attr[attr_idx].id = SAI_ACL_ENTRY_ATTR_ACTION_EGRESS_SAMPLEPACKET_ENABLE;
+        rule_attr[attr_idx].value.aclaction.enable = true;
+        rule_attr[attr_idx].value.aclaction.parameter.oid = session_id;
+        attr_idx++;
+    }
+    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id, switch_id, attr_idx, rule_attr);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
     free (rule_attr[3].value.aclfield.data.objlist.list);
 
@@ -364,74 +398,76 @@ TEST_F(samplepacketTest, flow_based_set) {
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
     free (set_rule_attr.value.aclfield.data.objlist.list);
 
-    rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
-    rule_attr[0].value.oid = acl_table_id;
-    rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
-    rule_attr[1].value.u32 = 1;
-    rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
-    rule_attr[2].value.booldata= true;
-    rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
-    rule_attr[3].value.aclfield.data.objlist.count = 1;
-    rule_attr[3].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
-                                                            1, sizeof(sai_object_id_t));
-    rule_attr[3].value.aclfield.data.objlist.list[0] = port_id_1;
-    rule_attr[3].value.aclfield.enable = true;
-    rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    rule_attr[4].value.aclaction.enable = true;
-    rule_attr[4].value.aclaction.parameter.oid = session_id_dup;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id2, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-    free (rule_attr[3].value.aclfield.data.objlist.list);
+    if(ing_flow_support) {
+        rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
+        rule_attr[0].value.oid = acl_table_id;
+        rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
+        rule_attr[1].value.u32 = 1;
+        rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
+        rule_attr[2].value.booldata= true;
+        rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
+        rule_attr[3].value.aclfield.data.objlist.count = 1;
+        rule_attr[3].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
+                1, sizeof(sai_object_id_t));
+        rule_attr[3].value.aclfield.data.objlist.list[0] = port_id_1;
+        rule_attr[3].value.aclfield.enable = true;
+        rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        rule_attr[4].value.aclaction.enable = true;
+        rule_attr[4].value.aclaction.parameter.oid = session_id_dup;
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id2, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        free (rule_attr[3].value.aclfield.data.objlist.list);
 
-    set_rule_attr.id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
-    set_rule_attr.value.aclfield.data.objlist.count = 1;
-    set_rule_attr.value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
-                                                            1, sizeof(sai_object_id_t));
-    set_rule_attr.value.aclfield.data.objlist.list[0] = port_id_1;
-    sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
-    EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
-    free (set_rule_attr.value.aclfield.data.objlist.list);
+        set_rule_attr.id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
+        set_rule_attr.value.aclfield.data.objlist.count = 1;
+        set_rule_attr.value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
+                1, sizeof(sai_object_id_t));
+        set_rule_attr.value.aclfield.data.objlist.list[0] = port_id_1;
+        sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
+        EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
+        free (set_rule_attr.value.aclfield.data.objlist.list);
 
-    set_rule_attr.id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    set_rule_attr.value.aclaction.enable = false;
-    set_rule_attr.value.aclaction.parameter.oid = session_id;
-    sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        set_rule_attr.id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        set_rule_attr.value.aclaction.enable = false;
+        set_rule_attr.value.aclaction.parameter.oid = session_id;
+        sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    set_rule_attr.id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
-    set_rule_attr.value.aclfield.data.objlist.count = 1;
-    set_rule_attr.value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
-                                                            1, sizeof(sai_object_id_t));
-    set_rule_attr.value.aclfield.data.objlist.list[0] = port_id_1;
-    set_rule_attr.value.aclfield.enable = true;
-    sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-    free (set_rule_attr.value.aclfield.data.objlist.list);
+        set_rule_attr.id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
+        set_rule_attr.value.aclfield.data.objlist.count = 1;
+        set_rule_attr.value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
+                1, sizeof(sai_object_id_t));
+        set_rule_attr.value.aclfield.data.objlist.list[0] = port_id_1;
+        set_rule_attr.value.aclfield.enable = true;
+        sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        free (set_rule_attr.value.aclfield.data.objlist.list);
 
-    set_rule_attr.id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    set_rule_attr.value.aclaction.enable = true;
-    set_rule_attr.value.aclaction.parameter.oid = session_id;
-    sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
-    EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
+        set_rule_attr.id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        set_rule_attr.value.aclaction.enable = true;
+        set_rule_attr.value.aclaction.parameter.oid = session_id;
+        sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
+        EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
 
-    set_rule_attr.id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
-    set_rule_attr.value.aclfield.enable = true;
-    set_rule_attr.value.aclfield.data.objlist.count = 1;
-    set_rule_attr.value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
-                                                            1, sizeof(sai_object_id_t));
-    set_rule_attr.value.aclfield.data.objlist.list[0] = port_id_2;
-    sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-    free (set_rule_attr.value.aclfield.data.objlist.list);
+        set_rule_attr.id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
+        set_rule_attr.value.aclfield.enable = true;
+        set_rule_attr.value.aclfield.data.objlist.count = 1;
+        set_rule_attr.value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
+                1, sizeof(sai_object_id_t));
+        set_rule_attr.value.aclfield.data.objlist.list[0] = port_id_2;
+        sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        free (set_rule_attr.value.aclfield.data.objlist.list);
 
-    set_rule_attr.id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    set_rule_attr.value.aclaction.enable = true;
-    set_rule_attr.value.aclaction.parameter.oid = session_id;
-    sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        set_rule_attr.id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        set_rule_attr.value.aclaction.enable = true;
+        set_rule_attr.value.aclaction.parameter.oid = session_id;
+        sai_rc = p_sai_acl_api_tbl->set_acl_entry_attribute (acl_rule_id, &set_rule_attr);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id));
-    EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id2));
+        EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id));
+        EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id2));
+    }
 
     EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_table (acl_table_id));
 
@@ -481,32 +517,34 @@ TEST_F(samplepacketTest, flow_based_and_port_based) {
     sai_rc = p_sai_acl_api_tbl->create_acl_table (&acl_table_id, switch_id, 12, table_attr);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
-    rule_attr[0].value.oid = acl_table_id;
-    rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
-    rule_attr[1].value.u32 = 1;
-    rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
-    rule_attr[2].value.booldata = true;
-    rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
-    rule_attr[3].value.aclfield.enable = true;
-    rule_attr[3].value.aclfield.data.objlist.count = 1;
-    rule_attr[3].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
-                                                            1, sizeof(sai_object_id_t));
-    rule_attr[3].value.aclfield.data.objlist.list[0] = port_id_1;
-    rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    rule_attr[4].value.aclaction.enable = true;
-    rule_attr[4].value.aclaction.parameter.oid = session_id;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_OBJECT_IN_USE, sai_rc);
+    if(ing_flow_support) {
+        rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
+        rule_attr[0].value.oid = acl_table_id;
+        rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
+        rule_attr[1].value.u32 = 1;
+        rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
+        rule_attr[2].value.booldata = true;
+        rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
+        rule_attr[3].value.aclfield.enable = true;
+        rule_attr[3].value.aclfield.data.objlist.count = 1;
+        rule_attr[3].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
+                1, sizeof(sai_object_id_t));
+        rule_attr[3].value.aclfield.data.objlist.list[0] = port_id_1;
+        rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        rule_attr[4].value.aclaction.enable = true;
+        rule_attr[4].value.aclaction.parameter.oid = session_id;
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_OBJECT_IN_USE, sai_rc);
 
-    sai_rc = sai_test_samplepacket_session_ingress_port_add (port_id_1, SAI_NULL_OBJECT_ID);
+        sai_rc = sai_test_samplepacket_session_ingress_port_add (port_id_1, SAI_NULL_OBJECT_ID);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id));
+        EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id));
+    }
     EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_table (acl_table_id));
 
     free (rule_attr[3].value.aclfield.data.objlist.list);
@@ -567,110 +605,112 @@ TEST_F(samplepacketTest, flow_based_duplicate) {
     sai_rc = p_sai_acl_api_tbl->create_acl_table (&acl_table_id, switch_id, 12, table_attr);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
-    rule_attr[0].value.oid = acl_table_id;
-    rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
-    rule_attr[1].value.u32 = 1;
-    rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
-    rule_attr[2].value.booldata= true;
-    rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
-    rule_attr[3].value.aclfield.enable = true;
-    rule_attr[3].value.aclfield.data.objlist.count = 1;
-    rule_attr[3].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
-                                                            1, sizeof(sai_object_id_t));
-    rule_attr[3].value.aclfield.data.objlist.list[0] = port_id_1;
-    rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    rule_attr[4].value.aclaction.enable = true;
-    rule_attr[4].value.aclaction.parameter.oid = session_id;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_1, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-    free (rule_attr[3].value.aclfield.data.objlist.list);
+    if(ing_flow_support) {
+        rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
+        rule_attr[0].value.oid = acl_table_id;
+        rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
+        rule_attr[1].value.u32 = 1;
+        rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
+        rule_attr[2].value.booldata= true;
+        rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
+        rule_attr[3].value.aclfield.enable = true;
+        rule_attr[3].value.aclfield.data.objlist.count = 1;
+        rule_attr[3].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
+                1, sizeof(sai_object_id_t));
+        rule_attr[3].value.aclfield.data.objlist.list[0] = port_id_1;
+        rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        rule_attr[4].value.aclaction.enable = true;
+        rule_attr[4].value.aclaction.parameter.oid = session_id;
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_1, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        free (rule_attr[3].value.aclfield.data.objlist.list);
 
-    rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
-    rule_attr[0].value.oid = acl_table_id;
-    rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
-    rule_attr[1].value.u32 = 1;
-    rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
-    rule_attr[2].value.booldata= true;
-    rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
-    rule_attr[3].value.aclfield.enable = true;
-    rule_attr[3].value.aclfield.data.objlist.count = 1;
-    rule_attr[3].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
-                                                            1, sizeof(sai_object_id_t));
-    rule_attr[3].value.aclfield.data.objlist.list[0] = port_id_2;
-    rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    rule_attr[4].value.aclaction.enable = true;
-    rule_attr[4].value.aclaction.parameter.oid = session_id_dup;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_2, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-    free (rule_attr[3].value.aclfield.data.objlist.list);
+        rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
+        rule_attr[0].value.oid = acl_table_id;
+        rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
+        rule_attr[1].value.u32 = 1;
+        rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
+        rule_attr[2].value.booldata= true;
+        rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
+        rule_attr[3].value.aclfield.enable = true;
+        rule_attr[3].value.aclfield.data.objlist.count = 1;
+        rule_attr[3].value.aclfield.data.objlist.list = (sai_object_id_t *) calloc(
+                1, sizeof(sai_object_id_t));
+        rule_attr[3].value.aclfield.data.objlist.list[0] = port_id_2;
+        rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        rule_attr[4].value.aclaction.enable = true;
+        rule_attr[4].value.aclaction.parameter.oid = session_id_dup;
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_2, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        free (rule_attr[3].value.aclfield.data.objlist.list);
 
-    rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
-    rule_attr[0].value.oid = acl_table_id;
-    rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
-    rule_attr[1].value.u32 = 1;
-    rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
-    rule_attr[2].value.booldata= true;
-    rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
-    rule_attr[3].value.aclfield.enable = true;
-    rule_attr[3].value.objlist.count = 2;
-    rule_attr[3].value.objlist.list = (sai_object_id_t *) calloc(
-                                                            2, sizeof(sai_object_id_t));
-    rule_attr[3].value.objlist.list[0] = port_id_1;
-    rule_attr[3].value.objlist.list[1] = port_id_2;
-    rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    rule_attr[4].value.aclaction.enable = true;
-    rule_attr[4].value.aclaction.parameter.oid = session_id_dup;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_3, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
-    free (rule_attr[3].value.objlist.list);
+        rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
+        rule_attr[0].value.oid = acl_table_id;
+        rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
+        rule_attr[1].value.u32 = 1;
+        rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
+        rule_attr[2].value.booldata= true;
+        rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IN_PORTS;
+        rule_attr[3].value.aclfield.enable = true;
+        rule_attr[3].value.objlist.count = 2;
+        rule_attr[3].value.objlist.list = (sai_object_id_t *) calloc(
+                2, sizeof(sai_object_id_t));
+        rule_attr[3].value.objlist.list[0] = port_id_1;
+        rule_attr[3].value.objlist.list[1] = port_id_2;
+        rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        rule_attr[4].value.aclaction.enable = true;
+        rule_attr[4].value.aclaction.parameter.oid = session_id_dup;
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_3, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
+        free (rule_attr[3].value.objlist.list);
 
-    rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
-    rule_attr[0].value.oid = acl_table_id;
-    rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
-    rule_attr[1].value.u32 = 1;
-    rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
-    rule_attr[2].value.booldata= true;
-    rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IP_PROTOCOL;
-    rule_attr[3].value.aclfield.enable = true;
-    rule_attr[3].value.aclfield.data.u8 = 17;
-    rule_attr[3].value.aclfield.mask.u8 = 0xff;
-    rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    rule_attr[4].value.aclaction.enable = true;
-    rule_attr[4].value.aclaction.parameter.oid = session_id;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_3, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
+        rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
+        rule_attr[0].value.oid = acl_table_id;
+        rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
+        rule_attr[1].value.u32 = 1;
+        rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
+        rule_attr[2].value.booldata= true;
+        rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IP_PROTOCOL;
+        rule_attr[3].value.aclfield.enable = true;
+        rule_attr[3].value.aclfield.data.u8 = 17;
+        rule_attr[3].value.aclfield.mask.u8 = 0xff;
+        rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        rule_attr[4].value.aclaction.enable = true;
+        rule_attr[4].value.aclaction.parameter.oid = session_id;
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_3, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
 
-    rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
-    rule_attr[0].value.oid = acl_table_id;
-    rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
-    rule_attr[1].value.u32 = 1;
-    rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
-    rule_attr[2].value.booldata= true;
-    rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IP_PROTOCOL;
-    rule_attr[3].value.aclfield.enable = true;
-    rule_attr[3].value.aclfield.data.u8 = 17;
-    rule_attr[3].value.aclfield.mask.u8 = 0xff;
-    rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
-    rule_attr[4].value.aclaction.enable = true;
-    rule_attr[4].value.aclaction.parameter.oid = session_id_dup;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_4, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
+        rule_attr[0].id = SAI_ACL_ENTRY_ATTR_TABLE_ID;
+        rule_attr[0].value.oid = acl_table_id;
+        rule_attr[1].id =  SAI_ACL_ENTRY_ATTR_PRIORITY;
+        rule_attr[1].value.u32 = 1;
+        rule_attr[2].id = SAI_ACL_ENTRY_ATTR_ADMIN_STATE;
+        rule_attr[2].value.booldata= true;
+        rule_attr[3].id = SAI_ACL_ENTRY_ATTR_FIELD_IP_PROTOCOL;
+        rule_attr[3].value.aclfield.enable = true;
+        rule_attr[3].value.aclfield.data.u8 = 17;
+        rule_attr[3].value.aclfield.mask.u8 = 0xff;
+        rule_attr[4].id = SAI_ACL_ENTRY_ATTR_ACTION_INGRESS_SAMPLEPACKET_ENABLE;
+        rule_attr[4].value.aclaction.enable = true;
+        rule_attr[4].value.aclaction.parameter.oid = session_id_dup;
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_4, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
 
-    rule_attr[4].value.aclaction.parameter.oid = session_id;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_4, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
+        rule_attr[4].value.aclaction.parameter.oid = session_id;
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_4, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
 
-    rule_attr[4].value.aclaction.parameter.oid = session_id_dup2;
-    sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_4, switch_id, 5, rule_attr);
-    EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
+        rule_attr[4].value.aclaction.parameter.oid = session_id_dup2;
+        sai_rc = p_sai_acl_api_tbl->create_acl_entry (&acl_rule_id_4, switch_id, 5, rule_attr);
+        EXPECT_EQ (SAI_STATUS_FAILURE, sai_rc);
 
-    sai_rc = sai_test_samplepacket_session_destroy (session_id);
+        sai_rc = sai_test_samplepacket_session_destroy (session_id);
 
-    EXPECT_EQ (SAI_STATUS_OBJECT_IN_USE, sai_rc);
+        EXPECT_EQ (SAI_STATUS_OBJECT_IN_USE, sai_rc);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id_1));
-    EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id_2));
+        EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id_1));
+        EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_entry(acl_rule_id_2));
+    }
     EXPECT_EQ (SAI_STATUS_SUCCESS, p_sai_acl_api_tbl->remove_acl_table (acl_table_id));
 
     sai_rc = sai_test_samplepacket_session_destroy (session_id);

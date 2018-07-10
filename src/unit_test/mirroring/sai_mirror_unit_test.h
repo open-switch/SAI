@@ -14,8 +14,8 @@ extern "C" {
 #include "saiacl.h"
 #include "saivlan.h"
 #include "sailag.h"
+#include "saibridge.h"
 #include "saitypes.h"
-#include "std_type_defs.h"
 }
 
 #define SAI_MIRROR_VLAN_2 2
@@ -33,6 +33,7 @@ class mirrorTest : public ::testing::Test
         static sai_acl_api_t            *p_sai_acl_api_tbl;
         static sai_vlan_api_t           *p_sai_vlan_api_tbl;
         static sai_lag_api_t            *p_sai_lag_api_table;
+        static sai_bridge_api_t         *p_sai_bridge_api_tbl;
         static sai_object_id_t           sai_mirror_first_port;
         static sai_object_id_t           sai_mirror_second_port;
         static sai_object_id_t           sai_mirror_third_port;
