@@ -1551,6 +1551,16 @@ typedef enum _sai_switch_attr_t
     /** Custom range base value */
     SAI_SWITCH_ATTR_CUSTOM_RANGE_START = 0x10000000,
 
+    /**
+     * @brief Split Horizon ID range
+     *
+     * The range should start from a non-zero value.
+     *
+     * @type sai_u32_range_t
+     * @flags READ_ONLY
+     */
+    SAI_SWITCH_ATTR_SPLIT_HORIZON_ID_RANGE,
+
     /** End of custom range base */
     SAI_SWITCH_ATTR_CUSTOM_RANGE_END
 
@@ -1664,6 +1674,13 @@ typedef enum _sai_switch_attr_t
  * the transceiver type plugged in to the port
  */
 #define SAI_KEY_HW_PORT_PROFILE_ID_CONFIG_FILE    "SAI_HW_PORT_PROFILE_ID_CONFIG_FILE"
+
+/**
+ * @def SAI_KEY_L3_ROUTE_EXTENDED_PREFIX_ENTRIES
+ * Number of IPv6 Extended prefix (>/64) route entries.
+ */
+#define SAI_KEY_L3_ROUTE_EXTENDED_PREFIX_ENTRIES  "SAI_KEY_L3_ROUTE_EXTENDED_PREFIX_ENTRIES"
+
 
 /**
  * @brief Switch shutdown request callback.

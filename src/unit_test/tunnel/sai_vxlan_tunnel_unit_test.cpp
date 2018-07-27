@@ -20,7 +20,7 @@
 #include "sai_tunnel_unit_test.h"
 #include "sai_l3_unit_test_utils.h"
 #include "sai_vxlan_tunnel_unit_test_utils.h"
-
+#include <inttypes.h>
 extern "C" {
 #include "saitypes.h"
 #include "saistatus.h"
@@ -749,6 +749,8 @@ TEST_F (saiTunnelTest, vxlan_underlay_ecmp_route_with_l2mc_flooding)
     const unsigned int vlan_id_2             = 20;
     sai_ip_addr_family_t  ip4_af             = SAI_IP_ADDR_FAMILY_IPV4;
 
+    int status;
+
     sai_test_vxlan_1d_bridge_create(&bridge_id, true);
 
     sai_test_vxlan_encap_tunnel_map_create(&encap_map_id, true);
@@ -790,6 +792,18 @@ TEST_F (saiTunnelTest, vxlan_underlay_ecmp_route_with_l2mc_flooding)
     /* Create a Underlay route for the tunnel DIP */
     sai_test_vxlan_route_create(dflt_vr_id, ip4_af, prefix_str, prefix_len,
                                 dflt_underlay_nhg_id, true);
+
+
+    status = sai_test_bridge_port_stats_get(bridge_sub_port_id_1, 4, SAI_BRIDGE_PORT_STAT_OUT_PACKETS,
+                                             SAI_BRIDGE_PORT_STAT_OUT_OCTETS,
+                                            SAI_BRIDGE_PORT_STAT_IN_PACKETS, SAI_BRIDGE_PORT_STAT_IN_OCTETS);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+    printf("\ngetting tunnrl intiator ");
+    status = sai_test_tunnel_stats_get(tunnel_id, 4,  SAI_TUNNEL_STAT_OUT_OCTETS, SAI_TUNNEL_STAT_OUT_PACKETS,
+                                      SAI_TUNNEL_STAT_IN_PACKETS, SAI_TUNNEL_STAT_IN_OCTETS);
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
     /* Delete Underlay route */
     sai_test_vxlan_route_remove(dflt_vr_id, ip4_af, prefix_str, prefix_len,true);
@@ -1341,6 +1355,101 @@ TEST_F (saiTunnelTest, vxlan_underlay_vlan_rif_route_update)
 
     sai_test_vxlan_tunnel_term_remove (tunnel_term_id_1, true);
     sai_test_vxlan_tunnel_remove (tunnel_id_1, true);
+    sai_test_vxlan_tunnel_map_entry_remove (decap_map_entry_id, true);
+    sai_test_vxlan_tunnel_map_entry_remove (encap_map_entry_id, true);
+    sai_test_vxlan_tunnel_map_remove (decap_map_id, true);
+    sai_test_vxlan_tunnel_map_remove (encap_map_id, true);
+    sai_test_vxlan_1d_bridge_remove (bridge_id, true);
+}
+
+
+TEST_F (saiTunnelTest, vxlan_stat)
+{
+    sai_status_t       status;
+    sai_object_id_t    bridge_id             = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    bridge_tunnel_port_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    encap_map_id          = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    decap_map_id          = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    encap_map_entry_id    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    decap_map_entry_id    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    tunnel_id             = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    tunnel_term_id        = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    bridge_sub_port_id    = SAI_NULL_OBJECT_ID;
+    sai_uint32_t       vnid                  = 100;
+    const char         *tunnel_sip           = "10.0.0.1";
+    const char         *tunnel_dip           = "20.0.0.1";
+    const char         *prefix_str           = "20.0.0.0";
+    const unsigned int prefix_len            = 24;
+    const unsigned int vlan_id               = 10;
+    sai_ip_addr_family_t  ip4_af             = SAI_IP_ADDR_FAMILY_IPV4;
+
+    sai_test_vxlan_1d_bridge_create(&bridge_id, true);
+
+    sai_test_vxlan_encap_tunnel_map_create(&encap_map_id, true);
+    sai_test_vxlan_decap_tunnel_map_create(&decap_map_id, true);
+
+    sai_test_vxlan_encap_map_entry_create(&encap_map_entry_id, encap_map_id,
+                                          bridge_id, vnid, true);
+    sai_test_vxlan_decap_map_entry_create(&decap_map_entry_id, decap_map_id,
+                                          vnid, bridge_id, true);
+
+    sai_test_vxlan_tunnel_create(&tunnel_id, dflt_underlay_rif_id, dflt_overlay_rif_id,
+                                 tunnel_sip, encap_map_id, decap_map_id, true);
+
+    sai_test_vxlan_access_port_create(&bridge_sub_port_id, bridge_id,
+                                      sai_test_tunnel_port_id_get(1), vlan_id, true);
+
+    sai_test_vxlan_tunnel_port_create(&bridge_tunnel_port_id, bridge_id,
+                                      tunnel_id, true);
+
+
+
+    sai_test_vxlan_tunnel_term_create(&tunnel_term_id, dflt_vr_id, tunnel_dip,
+                                      tunnel_sip, tunnel_id, true);
+    /* Create a Underlay route for the tunnel DIP with next hop pointing to
+     * port rif*/
+    sai_test_vxlan_route_create(dflt_vr_id, ip4_af, prefix_str, prefix_len,
+                                dflt_underlay_port_nh_id, true);
+
+    /* Change the nexthop which points to vlan based rif. Check if the VXLAN
+     * packets are routed via the new nexthop*/
+    status = saiL3Test ::sai_test_route_attr_set (dflt_vr_id, ip4_af,
+                                                  prefix_str, prefix_len,
+                                                  SAI_ROUTE_ENTRY_ATTR_NEXT_HOP_ID,
+                                                  dflt_underlay_vlan_nh_id);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+    status = sai_test_bridge_port_stats_get(bridge_sub_port_id, 4, SAI_BRIDGE_PORT_STAT_OUT_PACKETS,
+                                             SAI_BRIDGE_PORT_STAT_OUT_OCTETS,
+                                            SAI_BRIDGE_PORT_STAT_IN_PACKETS, SAI_BRIDGE_PORT_STAT_IN_OCTETS);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+    status = sai_test_bridge_port_stats_clear(bridge_sub_port_id, 4, SAI_BRIDGE_PORT_STAT_OUT_PACKETS,
+                                             SAI_BRIDGE_PORT_STAT_OUT_OCTETS,
+                                            SAI_BRIDGE_PORT_STAT_IN_PACKETS, SAI_BRIDGE_PORT_STAT_IN_OCTETS);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    status = sai_test_tunnel_stats_get(tunnel_id, 4,  SAI_TUNNEL_STAT_OUT_OCTETS, SAI_TUNNEL_STAT_OUT_PACKETS,
+                                      SAI_TUNNEL_STAT_IN_PACKETS, SAI_TUNNEL_STAT_IN_OCTETS);
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+
+
+    status = sai_test_tunnel_stats_clear(tunnel_id, 4,  SAI_TUNNEL_STAT_OUT_OCTETS, SAI_TUNNEL_STAT_OUT_PACKETS,
+                                      SAI_TUNNEL_STAT_IN_PACKETS, SAI_TUNNEL_STAT_IN_OCTETS);
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+
+    /* Delete Underlay route */
+    sai_test_vxlan_route_remove (dflt_vr_id, ip4_af, prefix_str, prefix_len, true);
+    sai_test_vxlan_tunnel_term_remove (tunnel_term_id, true);
+    sai_test_vxlan_bridge_port_admin_state_set(bridge_tunnel_port_id, false, true);
+    sai_test_vxlan_bridge_port_admin_state_set(bridge_sub_port_id, false, true);
+    sai_test_vxlan_bridge_port_remove (bridge_tunnel_port_id, true);
+    sai_test_vxlan_bridge_port_remove (bridge_sub_port_id, true);
+    sai_test_vxlan_tunnel_remove (tunnel_id, true);
     sai_test_vxlan_tunnel_map_entry_remove (decap_map_entry_id, true);
     sai_test_vxlan_tunnel_map_entry_remove (encap_map_entry_id, true);
     sai_test_vxlan_tunnel_map_remove (decap_map_id, true);

@@ -152,6 +152,10 @@ sai_acl_api_t* samplepacketTest ::p_sai_acl_api_tbl = NULL;
 sai_object_id_t samplepacketTest ::port_id_1 = 0;
 sai_object_id_t samplepacketTest ::port_id_2 = 0;
 sai_object_id_t samplepacketTest ::switch_id = 0;
+bool samplepacketTest ::ing_port_support = true;
+bool samplepacketTest ::egr_port_support = true;
+bool samplepacketTest ::ing_flow_support = true;
+bool samplepacketTest ::egr_flow_support = true;
 
 sai_status_t samplepacketTest ::sai_test_samplepacket_session_create (sai_object_id_t *p_session_id,
         uint32_t attr_count,

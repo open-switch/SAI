@@ -1,3 +1,13 @@
+opx-sai-api (35.1.0+vxlan1) unstable; urgency=medium
+
+  * Feature: VxLAN Support
+  * Update: Add IPv6 Extended prefix(>/64) route entry size
+  * Bugfix: Fix the VLAN Id attribute
+  * Update: SAI-API Attributes for supporting split horizon
+  * Update: additional ip stat attributes
+
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Fri, 27 Jul 2018 11:45:33 -0800
+
 opx-sai-api (35.1.0) unstable; urgency=medium
 
   * Update: Upgrade to SAI 1.2

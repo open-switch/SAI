@@ -1614,6 +1614,20 @@ typedef enum _sai_port_stat_t
     /** Get in port watermark headroom occupancy in bytes [uint64_t] */
     SAI_PORT_STAT_IN_XOFF_ROOM_WATERMARK_BYTES,
 
+    /** SAI port stat IP header errors **/
+    SAI_PORT_STAT_IP_IN_HDR_ERRORS,
+
+    /** SAI port stat IP forward datagram **/
+    SAI_PORT_STAT_IP_FORW_DATAGRAMS,
+
+    /** SAI port stat IPV6 header errors **/
+    SAI_PORT_STAT_IPV6_IN_HDR_ERRORS,
+
+    /** SAI port stat IPV6 address errors **/
+    SAI_PORT_STAT_IPV6_IN_ADDR_ERRORS,
+
+    /** SAI port stat IPV6 out forward datagram **/
+    SAI_PORT_STAT_IPV6_OUT_FORW_DATAGRAMS,
 } sai_port_stat_t;
 
 /**

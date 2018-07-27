@@ -82,13 +82,15 @@ sai_acl_rule_unit_test_CPPFLAGS+=-Iunit_test/udf
 sai_acl_rule_unit_test_CPPFLAGS+=-Iunit_test/bridge
 
 UNIT_TEST += sai_acl_counter_unit_test
-sai_acl_counter_unit_test_SRCS= unit_test/acl/sai_acl_unit_test_utils.cpp unit_test/acl/sai_acl_counter_unit_test.cpp
+sai_acl_counter_unit_test_SRCS= unit_test/acl/sai_acl_unit_test_utils.cpp unit_test/acl/sai_acl_counter_unit_test.cpp unit_test/bridge/sai_bridge_unit_test_utils.cpp
 sai_acl_counter_unit_test_LDFLAGS= ${SAI_LIB}
+sai_acl_counter_unit_test_CPPFLAGS= -Iunit_test/bridge
 
 UNIT_TEST += sai_mirror_unit_test
 sai_mirror_unit_test_SRCS = unit_test/mirroring/sai_mirror_unit_test.cpp unit_test/mirroring/sai_mirror_unit_test_utils.cpp unit_test/port/sai_port_breakout_test_utils.cpp
+sai_mirror_unit_test_SRCS+= unit_test/bridge/sai_bridge_unit_test_utils.cpp
 sai_mirror_unit_test_LDFLAGS= ${SAI_LIB}
-sai_mirror_unit_test_CPPFLAGS=-Iunit_test/port
+sai_mirror_unit_test_CPPFLAGS=-Iunit_test/port -Iunit_test/bridge
 
 UNIT_TEST += sai_hostif_unit_test
 sai_hostif_unit_test_SRCS= unit_test/hostintf/sai_hostif_unit_test.cpp
@@ -123,7 +125,9 @@ sai_qos_policer_unit_test_LDFLAGS= ${SAI_LIB}
 
 UNIT_TEST += sai_qos_wred_unit_test
 sai_qos_wred_unit_test_SRCS = unit_test/qos/sai_qos_unit_test_utils.cpp unit_test/qos/sai_wred_unit_test.cpp
+sai_qos_wred_unit_test_SRCS+=unit_test/acl/sai_acl_unit_test_utils.cpp unit_test/bridge/sai_bridge_unit_test_utils.cpp
 sai_qos_wred_unit_test_LDFLAGS= ${SAI_LIB}
+sai_qos_wred_unit_test_CPPFLAGS = -Iunit_test/acl -Iunit_test/bridge
 
 UNIT_TEST += sai_qos_buffer_unit_test
 sai_qos_buffer_unit_test_SRCS = unit_test/qos/sai_qos_unit_test_utils.cpp unit_test/qos/sai_qos_buffer_unit_test.cpp

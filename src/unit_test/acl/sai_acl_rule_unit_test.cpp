@@ -21,6 +21,7 @@
 #include "sai_acl_unit_test_utils.h"
 #include "sai_l3_unit_test_utils.h"
 #include "sai_udf_unit_test.h"
+#include "sai_bridge_unit_test_utils.h"
 
 extern "C" {
 #include "sai.h"
@@ -1522,7 +1523,7 @@ TEST_F(saiACLRuleTest, rule_set_with_invalid_attributes)
     sai_rc = sai_test_acl_rule_set (mac_rule_id, 1,
                                     SAI_ACL_ENTRY_ATTR_FIELD_SRC_IP,
                                     true, &src_ip_data, &src_ip_mask);
-    EXPECT_EQ (SAI_STATUS_ITEM_NOT_FOUND, sai_rc);
+    EXPECT_NE (SAI_STATUS_SUCCESS, sai_rc);
 
     /* Unknown Attributes */
     sai_rc = sai_test_acl_rule_set (mac_rule_id, 1,
@@ -2759,7 +2760,7 @@ TEST_F(saiACLRuleTest, rule_with_redirect_lag_action)
     sai_rc = sai_test_acl_rule_lag_create(&lag_id, &attr);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
-    sai_rc = sai_test_acl_rule_create (&acl_rule_id, 8,
+    sai_rc = sai_test_acl_rule_create (&acl_rule_id, 7,
                                        SAI_ACL_ENTRY_ATTR_TABLE_ID, mac_table_id,
                                        SAI_ACL_ENTRY_ATTR_PRIORITY, 1,
                                        SAI_ACL_ENTRY_ATTR_ADMIN_STATE, true,
@@ -2769,8 +2770,6 @@ TEST_F(saiACLRuleTest, rule_with_redirect_lag_action)
                                        1, 16, 0x3f,
                                        SAI_ACL_ENTRY_ATTR_FIELD_ECN,
                                        1, 2, 0x3,
-                                       SAI_ACL_ENTRY_ATTR_ACTION_PACKET_ACTION, true,
-                                       SAI_PACKET_ACTION_LOG,
                                        SAI_ACL_ENTRY_ATTR_ACTION_REDIRECT,
                                        1, lag_id);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
@@ -3190,21 +3189,6 @@ TEST_F(saiACLRuleTest, rule_with_multiple_mirror_action)
     EXPECT_EQ (p_attr_list_get[0].value.aclaction.parameter.objlist.list[0], mirror_id[2]);
     EXPECT_EQ (p_attr_list_get[0].value.aclaction.parameter.objlist.list[1], mirror_id[3]);
 
-    /* Modify the mirror session list with same count */
-    sai_rc = sai_test_acl_rule_set (rule_id, 1,
-                                    SAI_ACL_ENTRY_ATTR_ACTION_MIRROR_EGRESS,
-                                    true, 2, mirror_id[0], mirror_id[1]);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-
-    sai_rc = sai_test_acl_rule_get (rule_id, p_attr_list_get,
-                                    test_attr_count, SAI_ACL_ENTRY_ATTR_ACTION_MIRROR_EGRESS);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
-
-    EXPECT_EQ (p_attr_list_get[0].value.aclaction.enable, true);
-    EXPECT_EQ (p_attr_list_get[0].value.aclaction.parameter.objlist.count, 2);
-    EXPECT_EQ (p_attr_list_get[0].value.aclaction.parameter.objlist.list[0], mirror_id[0]);
-    EXPECT_EQ (p_attr_list_get[0].value.aclaction.parameter.objlist.list[1], mirror_id[1]);
-
     /* Remove the Mirror Session list and add it again */
     sai_rc = sai_test_acl_rule_set (rule_id, 1,
                                     SAI_ACL_ENTRY_ATTR_ACTION_MIRROR_EGRESS, 0, 0, 0);
@@ -3301,6 +3285,7 @@ TEST_F(saiACLRuleTest, rule_with_fdb_meta_data)
     unsigned int             fdb_meta_data_max = 0;
     unsigned int             fdb_meta_data_min = 0;
     sai_object_id_t          meta_data_counter_id = 0;
+    sai_object_id_t          switch_id = saiACLTest ::sai_acl_get_global_switch_id();
 
     sai_rc = sai_test_acl_rule_create_attr_list (&p_attr_list_get, test_attr_count,
                                                  0, 0, false, false);
@@ -3342,7 +3327,9 @@ TEST_F(saiACLRuleTest, rule_with_fdb_meta_data)
     attr_list[0].value.s32 = SAI_FDB_ENTRY_TYPE_DYNAMIC;
 
     attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
-    attr_list[1].value.oid = bridge_port_id_1;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_bridge_ut_get_bridge_port_from_port(p_sai_switch_api_tbl, p_sai_bridge_api_tbl,
+              switch_id, port_id_1, &(attr_list[1].value.oid)));
 
     attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
     attr_list[2].value.s32 = SAI_PACKET_ACTION_FORWARD;
@@ -3645,6 +3632,8 @@ TEST_F(saiACLRuleTest, rule_with_vlan_meta_data)
     sai_object_id_t          meta_data_counter_id = 0;
     sai_object_id_t          vlan_obj_id = 0;
     sai_object_id_t          vlan_member_id = 0;
+    sai_object_id_t          bridge_port_id = 0;
+    sai_object_id_t          switch_id = saiACLTest ::sai_acl_get_global_switch_id();
 
     sai_rc = sai_test_acl_rule_create_attr_list (&p_attr_list_get, test_attr_count,
                                                  0, 0, false, false);
@@ -3671,8 +3660,11 @@ TEST_F(saiACLRuleTest, rule_with_vlan_meta_data)
             &vlan_attr_list, true);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_bridge_ut_get_bridge_port_from_port(p_sai_switch_api_tbl, p_sai_bridge_api_tbl,
+              switch_id, port_id_1, &bridge_port_id));
     sai_rc = sai_test_acl_rule_vlan_port_add(&vlan_member_id, vlan_obj_id,
-            bridge_port_id_1, SAI_VLAN_TAGGING_MODE_TAGGED);
+            bridge_port_id, SAI_VLAN_TAGGING_MODE_TAGGED);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
     /* Get Vlan MetaData from the VLAN Table */
@@ -4064,6 +4056,22 @@ TEST_F(saiACLRuleTest, rule_with_l3_meta_data)
     sai_rc = sai_test_acl_rule_remove (route_rule_id);
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 
+    sai_rc = sai_test_acl_counter_remove (neighbor_meta_data_counter_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_rc = sai_test_acl_counter_remove (route_meta_data_counter_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /* Create a counter and associate to the ingress rule */
+    sai_rc = sai_test_acl_counter_create (&neighbor_meta_data_counter_id, 2,
+                                          SAI_ACL_COUNTER_ATTR_TABLE_ID, table_id,
+                                          SAI_ACL_COUNTER_ATTR_ENABLE_PACKET_COUNT, true);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_rc = sai_test_acl_counter_create (&route_meta_data_counter_id, 2,
+                                          SAI_ACL_COUNTER_ATTR_TABLE_ID, table_id,
+                                          SAI_ACL_COUNTER_ATTR_ENABLE_PACKET_COUNT, true);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
     /* Create a rule which has both Neighbor as well as Route Metadata */
     sai_rc = sai_test_acl_rule_create (&rule_id, 9,
                                 SAI_ACL_ENTRY_ATTR_TABLE_ID, table_id,
@@ -4169,6 +4177,7 @@ TEST_F(saiACLRuleTest, rule_with_npu_meta_data)
     sai_object_id_t          vrf_id = 0, port_rif_id = 0;
     const char              *p_neighbor_mac = "00:a1:a2:a3:a4:00";
     const char              *p_ip_addr_str = "11.0.0.1";
+    sai_object_id_t          switch_id = saiACLTest ::sai_acl_get_global_switch_id();
 
 
     /* Table Create */
@@ -4195,7 +4204,9 @@ TEST_F(saiACLRuleTest, rule_with_npu_meta_data)
     attr_list[0].value.s32 = SAI_FDB_ENTRY_TYPE_DYNAMIC;
 
     attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
-    attr_list[1].value.oid = bridge_port_id_1;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_bridge_ut_get_bridge_port_from_port(p_sai_switch_api_tbl, p_sai_bridge_api_tbl,
+              switch_id, port_id_1, &(attr_list[1].value.oid)));
 
     attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
     attr_list[2].value.s32 = SAI_PACKET_ACTION_FORWARD;

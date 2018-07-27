@@ -30,6 +30,7 @@ extern "C" {
 #define SAI_MAX_PORTS  256
 #define SAI_MAX_FDB_TEST_ATTRIBUTES 3
 static sai_object_id_t switch_id = 0;
+static sai_object_id_t  vlan_obj_id = 0;
 
 extern uint32_t port_count;
 extern sai_object_id_t bridge_port_list[];;
@@ -61,7 +62,7 @@ static inline void sai_set_test_fdb_entry(sai_fdb_entry_t* fdb_entry,
     } else {
         fdb_entry->mac_address[5] = 0xc;
     }
-    fdb_entry->bv_id = SAI_GTEST_VLAN_OBJ;
+    fdb_entry->bv_id = vlan_obj_id;
 }
 
 /*
@@ -106,6 +107,8 @@ class fdbInit : public ::testing::Test
 
             ASSERT_TRUE(sai_fdb_api_table != NULL);
 
+            ASSERT_EQ(NULL,sai_api_query(SAI_API_VLAN,
+                        (static_cast<void**>(static_cast<void*>(&sai_vlan_api_table)))));
 
             EXPECT_TRUE(sai_fdb_api_table->create_fdb_entry != NULL);
             EXPECT_TRUE(sai_fdb_api_table->remove_fdb_entry != NULL);
@@ -162,10 +165,20 @@ class fdbInit : public ::testing::Test
             bridge_port_id_2 = bridge_port_list[port_count-1];
             bridge_port_id_3 = bridge_port_list[1];
             bridge_port_id_4 = bridge_port_list[2];
+
+            sai_attribute_t attr;
+            memset(&attr,0,sizeof(attr));
+            attr.id = SAI_VLAN_ATTR_VLAN_ID;
+            attr.value.u16 = SAI_GTEST_VLAN;
+            EXPECT_EQ (SAI_STATUS_SUCCESS,
+                       sai_vlan_api_table->create_vlan(&vlan_obj_id,0,1,(const sai_attribute_t *)&attr));
+            printf("FDB Test VLAN %d created OID 0x%" PRIx64 "\r\n", SAI_GTEST_VLAN, vlan_obj_id);
+
         }
         static sai_bridge_api_t *p_sai_bridge_api_tbl;
         static sai_fdb_api_t* sai_fdb_api_table;
         static sai_lag_api_t* sai_lag_api_table;
+        static sai_vlan_api_t* sai_vlan_api_table;
         static sai_object_id_t  bridge_port_id_1;
         static sai_object_id_t  bridge_port_id_2;
         static sai_object_id_t  bridge_port_id_3;

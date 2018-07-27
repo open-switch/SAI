@@ -1001,6 +1001,112 @@ sai_status_t saiTunnelTest::sai_test_bridge_port_set (sai_object_id_t bridge_por
     return status;
 }
 
+void saiTunnelTest::sai_test_bridge_port_stats_type_fill (unsigned int stats_count,
+                                                     va_list *p_varg_list,
+                                                     sai_bridge_port_stat_t *p_tunnel_stats_list)
+{
+    unsigned int counter_idx = 0;
+
+    for(counter_idx = 0; counter_idx < stats_count; counter_idx++) {
+        p_tunnel_stats_list[counter_idx] = (sai_bridge_port_stat_t) va_arg ((*p_varg_list),
+                                                                       unsigned int);
+
+    }
+}
+
+sai_status_t saiTunnelTest::sai_test_bridge_port_stats_get (sai_object_id_t bridge_port_obj_id,
+                                                       unsigned int stats_count, ...)
+{
+    sai_status_t      status = SAI_STATUS_FAILURE;
+    va_list           ap;
+    sai_bridge_port_stat_t bridge_stats_list [max_tunnel_stats_count];
+    uint32_t          num_counters = 0;
+    uint32_t          counter_id = 0;
+    uint64_t          stats_val [max_tunnel_stats_count];
+
+    if (stats_count > max_tunnel_stats_count) {
+
+        TUNNEL_PRINT ("%s(): Stats count %u is greater than Max tunnel stats count "
+                      "%u.", __FUNCTION__, stats_count, max_tunnel_stats_count);
+
+        return status;
+    }
+
+    memset (bridge_stats_list, 0, sizeof (bridge_stats_list));
+    memset (stats_val, 0, sizeof (stats_val));
+
+    TUNNEL_PRINT ("Testing bridge port stats get for bridge id 0x%" PRIx64 " "
+                  "with stats count: %u.", bridge_port_obj_id, stats_count);
+
+    va_start (ap, stats_count);
+
+    sai_test_bridge_port_stats_type_fill (stats_count, &ap, bridge_stats_list);
+
+    va_end (ap);
+
+    num_counters = stats_count;
+
+    status = p_sai_bridge_api_tbl->get_bridge_port_stats (bridge_port_obj_id, num_counters,
+                                                     &bridge_stats_list[0],
+                                                     &stats_val[0]);
+
+    if (status != SAI_STATUS_SUCCESS) {
+        TUNNEL_PRINT ("SAI Bridge port stats get failed for 0x%" PRIx64 " "
+                      "with error: %d.", bridge_port_obj_id, status);
+    } else {
+
+        for(counter_id = 0; counter_id < num_counters; counter_id++) {
+            TUNNEL_PRINT ("Stat id = %d stat value %" PRIu64 "",bridge_stats_list[counter_id],
+                          stats_val[counter_id]);
+        }
+    }
+
+    return status;
+}
+
+sai_status_t saiTunnelTest::sai_test_bridge_port_stats_clear (sai_object_id_t bridge_port_obj_id,
+                                                       unsigned int stats_count, ...)
+{
+    sai_status_t      status = SAI_STATUS_FAILURE;
+    va_list           ap;
+    sai_bridge_port_stat_t bridge_stats_list [max_tunnel_stats_count];
+    uint32_t          num_counters = 0;
+
+    if (stats_count > max_tunnel_stats_count) {
+
+        TUNNEL_PRINT ("%s(): Stats count %u is greater than Max tunnel stats count "
+                      "%u.", __FUNCTION__, stats_count, max_tunnel_stats_count);
+
+        return status;
+    }
+
+    memset (bridge_stats_list, 0, sizeof (bridge_stats_list));
+
+    TUNNEL_PRINT ("Testing bridge port stats clear for bridge id 0x%" PRIx64 " "
+                  "with stats count: %u.", bridge_port_obj_id, stats_count);
+
+    va_start (ap, stats_count);
+
+    sai_test_bridge_port_stats_type_fill (stats_count, &ap, bridge_stats_list);
+
+    va_end (ap);
+
+    num_counters = stats_count;
+
+    status = p_sai_bridge_api_tbl->clear_bridge_port_stats (bridge_port_obj_id, num_counters,
+                                                     &bridge_stats_list[0]);
+
+    if (status != SAI_STATUS_SUCCESS) {
+        TUNNEL_PRINT ("SAI Bridge port stats clear failed for bridge id 0x%" PRIx64 " "
+                      "with error: %d.", bridge_port_obj_id, status);
+    } else {
+        TUNNEL_PRINT ("SAI Bridge port stats clear passed for bridge id 0x%" PRIx64 " "
+                      "with error: %d.", bridge_port_obj_id, status);
+
+        }
+
+    return status;
+}
 sai_status_t saiTunnelTest::sai_test_tunnel_map_create (
                                                sai_object_id_t *tunnel_map_id,
                                                unsigned int attr_count, ...)
@@ -1395,7 +1501,7 @@ sai_status_t saiTunnelTest::sai_test_tunnel_stats_get (sai_object_id_t tunnel_id
     }
 
     memset (tunnel_stats_list, 0, sizeof (tunnel_stats_list));
-    memset (stats_val, 0, sizeof (tunnel_stats_list));
+    memset (stats_val, 0, sizeof (stats_val));
 
     TUNNEL_PRINT ("Testing Tunnel stats get for tunnel id 0x%" PRIx64 " "
                   "with stats count: %u.", tunnel_id, stats_count);

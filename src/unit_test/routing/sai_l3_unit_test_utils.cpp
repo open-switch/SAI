@@ -802,7 +802,7 @@ static void sai_test_rif_attr_value_fill (sai_attribute_t *p_attr,
             break;
 
         case SAI_ROUTER_INTERFACE_ATTR_VLAN_ID:
-            p_attr->value.u16 = attr_val;
+            p_attr->value.oid = attr_val;
 
             printf ("Value: %d\r\n", p_attr->value.u16);
             break;

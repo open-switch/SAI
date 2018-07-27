@@ -209,11 +209,13 @@ sai_object_id_t sai_bridge_ut_get_def_stp_port_from_bridge_port(sai_stp_api_t   
     sai_api_query(SAI_API_SWITCH, (static_cast<void**>
                                  (static_cast<void*>(&p_sai_switch_api_tbl))));
 
+    memset (&attr,0,sizeof(sai_attribute_t));
+    memset (&stp_port_attr,0,sizeof(sai_attribute_t));
     attr.id = SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID;
 
     sai_rc = p_sai_switch_api_tbl->get_switch_attribute(switch_id, 1, &attr);
 
-    if(sai_rc != SAI_STATUS_SUCCESS) {
+    if(sai_rc != SAI_STATUS_SUCCESS || attr.value.oid == SAI_NULL_OBJECT_ID) {
         return SAI_NULL_OBJECT_ID;
     }
     def_stp_id = attr.value.oid;
@@ -248,7 +250,7 @@ sai_status_t sai_bridge_ut_add_bridge_port_to_def_stp(sai_object_id_t switch_id,
     sai_switch_api_t *p_sai_switch_api_tbl = NULL;
     sai_object_id_t   stp_port_id = SAI_NULL_OBJECT_ID;
     sai_object_id_t   def_stp_id;
-    sai_attribute_t   attr[3];
+    sai_attribute_t   attr[3] = {0};
     sai_status_t      sai_rc;
 
     sai_api_query(SAI_API_SWITCH, (static_cast<void**>
@@ -261,7 +263,7 @@ sai_status_t sai_bridge_ut_add_bridge_port_to_def_stp(sai_object_id_t switch_id,
 
     sai_rc = p_sai_switch_api_tbl->get_switch_attribute(switch_id, 1, attr);
 
-    if(sai_rc != SAI_STATUS_SUCCESS) {
+    if(sai_rc != SAI_STATUS_SUCCESS || attr[0].value.oid == SAI_NULL_OBJECT_ID) {
         return sai_rc;
     }
     def_stp_id = attr[0].value.oid;
@@ -341,12 +343,12 @@ sai_status_t sai_bridge_ut_remove_bridge_port(sai_bridge_api_t * p_sai_bridge_ap
     if(def_vlan_remove) {
         sai_rc = sai_bridge_ut_remove_bridge_port_from_def_vlan(switch_id, bridge_port_id);
         if(sai_rc != SAI_STATUS_SUCCESS) {
-            return sai_rc;
+            printf("Error %d in removing bridge port 0x%" PRIx64 " from def vlan\r\n", sai_rc, bridge_port_id);
         }
     }
     sai_rc = sai_bridge_ut_remove_bridge_port_from_def_stp(switch_id, bridge_port_id);
     if(sai_rc != SAI_STATUS_SUCCESS) {
-        return sai_rc;
+        printf("Error %d in removing bridge port 0x%" PRIx64 " from def stp\r\n", sai_rc, bridge_port_id);
     }
 
     sai_rc = p_sai_bridge_api_tbl->remove_bridge_port(bridge_port_id);
