@@ -1666,6 +1666,13 @@ typedef enum _sai_switch_attr_t
 #define SAI_KEY_HW_PORT_PROFILE_ID_CONFIG_FILE    "SAI_HW_PORT_PROFILE_ID_CONFIG_FILE"
 
 /**
+ * @def SAI_KEY_L3_ROUTE_EXTENDED_PREFIX_ENTRIES
+ * Number of IPv6 Extended prefix (>/64) route entries.
+ */
+#define SAI_KEY_L3_ROUTE_EXTENDED_PREFIX_ENTRIES  "SAI_KEY_L3_ROUTE_EXTENDED_PREFIX_ENTRIES"
+
+
+/**
  * @brief Switch shutdown request callback.
  *
  * Adapter DLL may request a shutdown due to an unrecoverable failure
