@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell EMC, Facebook Inc., Marvell International Ltd.
+ *    Dell EMC, Facebook, Inc., Marvell International Ltd.
  *
  * @file    saineighbor.h
  *
@@ -138,6 +138,13 @@ typedef struct _sai_neighbor_entry_t
      * @brief IP address
      */
     sai_ip_address_t ip_address;
+
+    /**
+     * @brief Virtual Router ID
+     *
+     * @objects SAI_OBJECT_TYPE_VIRTUAL_ROUTER
+     */
+    sai_object_id_t vr_id;
 
 } sai_neighbor_entry_t;
 

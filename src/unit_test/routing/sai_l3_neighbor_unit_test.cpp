@@ -929,6 +929,51 @@ TEST_F (saiL3NeighborTest, drop_action_on_vlan_rif)
     EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 }
 
+/*
+ * Validate that a Neighbor entry can be leaked in different VRF.
+ */
+TEST_F (saiL3NeighborTest, neighbor_entry_vrf_leaking)
+{
+    sai_status_t          status;
+    const char           *p_ip_addr_str = "2001:db8:85a3::8a2e:370:7334";
+    sai_ip_addr_family_t  ip_af = SAI_IP_ADDR_FAMILY_IPV6;
+    const char           *p_mac_str = "00:a1:a2:a3:a4:a5";
+    sai_object_id_t       new_vrf_id;
+
+    /* Create a different Virtual Router instance */
+    status = sai_test_vrf_create (&new_vrf_id, 0);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+    status = sai_test_neighbor_create (port_rif_id, ip_af, p_ip_addr_str,
+                                       default_neighbor_attr_count,
+                                       SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS,
+                                       p_mac_str);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+    /* Create another neighbor with same address in the different VRF */
+    status = sai_test_neighbor_create_in_vr (new_vrf_id, port_rif_id, ip_af, p_ip_addr_str,
+                                       default_neighbor_attr_count,
+                                       SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS,
+                                       p_mac_str);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+    status = sai_test_neighbor_remove (port_rif_id, ip_af, p_ip_addr_str);
+
+    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+
+    status = sai_test_neighbor_remove_from_vr (new_vrf_id, port_rif_id, ip_af, p_ip_addr_str);
+
+    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+
+    /* Remove the VRF */
+    status = sai_test_vrf_remove (new_vrf_id);
+
+    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+}
+
 int main (int argc, char **argv)
 {
     ::testing::InitGoogleTest (&argc, argv);

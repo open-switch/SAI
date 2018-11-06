@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell EMC, Facebook Inc., Marvell International Ltd.
+ *    Dell EMC, Facebook, Inc., Marvell International Ltd.
  *
  * @file    saimirror.h
  *
@@ -80,11 +80,13 @@ typedef enum _sai_mirror_session_attr_t
     SAI_MIRROR_SESSION_ATTR_TYPE = SAI_MIRROR_SESSION_ATTR_START,
 
     /**
-     * @brief Destination/Analyzer/Monitor Port
+     * @brief Destination/Analyzer/Monitor Port.
+     * null valid only for remote session and adds all VLAN members as monitor port
      *
      * @type sai_object_id_t
      * @flags MANDATORY_ON_CREATE | CREATE_AND_SET
      * @objects SAI_OBJECT_TYPE_PORT
+     * @allownull true
      */
     SAI_MIRROR_SESSION_ATTR_MONITOR_PORT,
 

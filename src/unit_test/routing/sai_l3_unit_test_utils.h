@@ -162,6 +162,15 @@ class saiL3Test : public ::testing::Test
                             sai_ip_addr_family_t ip_family, const char *ip_str,
                             sai_attribute_t *p_attr_list,
                             unsigned int attr_count, ...);
+        static sai_status_t sai_test_neighbor_create_in_vr (
+                            sai_object_id_t vr_id,
+                            sai_object_id_t rif_id,
+                            sai_ip_addr_family_t ip_family, const char *ip_str,
+                            unsigned int attr_count, ...);
+        static sai_status_t sai_test_neighbor_remove_from_vr (
+                            sai_object_id_t vr_id,
+                            sai_object_id_t rif_id,
+                            sai_ip_addr_family_t ip_family, const char *ip_str);
 
         /* Methods for NEXT-HOP-GROUP functionality SAI API testing. */
         static sai_status_t sai_test_nh_group_create_no_nh_list (

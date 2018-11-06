@@ -24,6 +24,7 @@
 #include "inttypes.h"
 
 #include "sai_acl_unit_test_utils.h"
+#include "sai_bridge_unit_test_utils.h"
 
 extern "C" {
 #include "sai.h"
@@ -445,6 +446,8 @@ const char* sai_acl_test_table_attr_id_to_name_get (unsigned int attr_id) {
         return " Ipv6 Next Header";
     } else if (SAI_ACL_TABLE_ATTR_FIELD_DROP_MARKED == attr_id){
         return " Drop Marked";
+    } else if (SAI_ACL_TABLE_ATTR_FIELD_BRIDGE_TYPE == attr_id) {
+        return "Bridge Type";
     } else if (SAI_ACL_TABLE_ATTR_ACL_ACTION_TYPE_LIST == attr_id) {
         return "Action list";
     }else {
@@ -886,6 +889,8 @@ static const char* sai_acl_test_rule_attr_id_to_name_get (unsigned int attr_id) 
         return "Ipv6 next header";
     } else if (SAI_ACL_ENTRY_ATTR_FIELD_DROP_MARKED == attr_id) {
         return "Drop Marked";
+    } else if (SAI_ACL_ENTRY_ATTR_FIELD_BRIDGE_TYPE == attr_id) {
+        return "Bridge Type";
     } else if (SAI_ACL_ENTRY_ATTR_ACTION_REDIRECT == attr_id) {
         return "Redirect Action";
     } else if (SAI_ACL_ENTRY_ATTR_ACTION_REDIRECT_LIST == attr_id) {
@@ -1028,6 +1033,7 @@ static sai_test_acl_rule_attr_type sai_test_acl_rule_get_attr_type (unsigned int
         case SAI_ACL_ENTRY_ATTR_FIELD_ACL_IP_FRAG:
         case SAI_ACL_ENTRY_ATTR_FIELD_PACKET_VLAN:
         case SAI_ACL_ENTRY_ATTR_ACTION_PACKET_ACTION:
+        case SAI_ACL_ENTRY_ATTR_FIELD_BRIDGE_TYPE:
             return SAI_TEST_ACL_ENTRY_ATTR_ENUM;
 
         case SAI_ACL_ENTRY_ATTR_FIELD_FDB_NPU_META_DST_HIT:
@@ -1304,16 +1310,42 @@ sai_object_id_t *lag_id, sai_attribute_t *tmp_attr)
 {
     sai_status_t        sai_rc = SAI_STATUS_SUCCESS;
     sai_attribute_t     attr[2];
+    sai_object_id_t     lag_mem_id;
+    unsigned int        port_idx;
+    sai_object_id_t bridge_port_id = SAI_NULL_OBJECT_ID;
 
-    sai_rc = p_sai_lag_api_tbl->create_lag(lag_id, switch_id, 1, attr);
+    sai_rc = p_sai_lag_api_tbl->create_lag(lag_id, switch_id, 0, NULL);
 
     if (sai_rc != SAI_STATUS_SUCCESS) {
         printf ("LAG Creation API failed with error: %d\r\n", sai_rc);
+        return sai_rc;
     } else {
         printf ("LAG Creation API success, LAG ID: 0x%" PRIx64 "\r\n",
                 *lag_id);
     }
 
+    for(port_idx = 0; port_idx < tmp_attr->value.objlist.count; port_idx++) {
+        EXPECT_EQ(SAI_STATUS_SUCCESS,
+                sai_bridge_ut_get_bridge_port_from_port(p_sai_switch_api_tbl, p_sai_bridge_api_tbl,
+                    switch_id, tmp_attr->value.objlist.list[port_idx], &bridge_port_id));
+        if(bridge_port_id != SAI_NULL_OBJECT_ID) {
+            EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                        bridge_port_id, true));
+        }
+        attr[0].id = SAI_LAG_MEMBER_ATTR_LAG_ID;
+        attr[0].value.oid = *lag_id;
+
+        attr[1].id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+        attr[1].value.oid = tmp_attr->value.objlist.list[port_idx];
+        sai_rc = p_sai_lag_api_tbl->create_lag_member(&lag_mem_id, switch_id, 2, attr);
+        if (sai_rc != SAI_STATUS_SUCCESS) {
+            printf ("LAG Member Creation API failed with error: %d\r\n", sai_rc);
+            return sai_rc;
+        } else {
+            printf ("LAG Member Creation API success, LAG ID: 0x%" PRIx64 "\r\n", lag_mem_id);
+        }
+
+    }
     return sai_rc;
 }
 
@@ -1321,7 +1353,40 @@ sai_status_t saiACLTest ::sai_test_acl_rule_lag_delete(
 sai_object_id_t lag_id)
 {
     sai_status_t        sai_rc = SAI_STATUS_SUCCESS;
+    unsigned int port_idx = 0;
+    sai_attribute_t attr;
+    sai_attribute_t lag_mem_attr;
+    sai_object_id_t bridge_port_id;
 
+    attr.id = SAI_LAG_ATTR_PORT_LIST;
+
+    attr.value.objlist.count = 0;
+
+    p_sai_lag_api_tbl->get_lag_attribute(lag_id, 1, &attr);
+
+    sai_object_id_t objlist[attr.value.objlist.count];
+    attr.value.objlist.list = objlist;
+
+    sai_rc = p_sai_lag_api_tbl->get_lag_attribute(lag_id, 1, &attr);
+    if(sai_rc != SAI_STATUS_SUCCESS) {
+        printf("Error %d in getting lag member list for lag 0x%" PRIx64 "\r\n", sai_rc, lag_id);
+        return sai_rc;
+    }
+
+    for(port_idx = 0; port_idx < attr.value.objlist.count; port_idx++) {
+        lag_mem_attr.id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+        EXPECT_EQ(SAI_STATUS_SUCCESS,p_sai_lag_api_tbl->get_lag_member_attribute(
+                    attr.value.objlist.list[port_idx], 1, &lag_mem_attr));
+        sai_rc = p_sai_lag_api_tbl->remove_lag_member(attr.value.objlist.list[port_idx]);
+        if(sai_rc != SAI_STATUS_SUCCESS) {
+            printf ("Error %d in removing lag member 0x%" PRIx64 " of lag x%" PRIx64 "\r\n",
+                    sai_rc, attr.value.objlist.list[port_idx], lag_id);
+            return sai_rc;
+        }
+        EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_create_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                    lag_mem_attr.value.oid, true, &bridge_port_id));
+
+    }
     sai_rc = p_sai_lag_api_tbl->remove_lag(lag_id);
 
     if (sai_rc != SAI_STATUS_SUCCESS) {

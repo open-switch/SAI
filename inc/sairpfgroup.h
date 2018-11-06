@@ -15,11 +15,11 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell EMC, Facebook Inc., Marvell International Ltd.
+ *    Dell EMC, Facebook, Inc., Marvell International Ltd.
  *
  * @file    sairpfgroup.h
  *
- * @brief   This module defines SAI RFP Group interface
+ * @brief   This module defines SAI RPF Group interface
  */
 
 #if !defined (__SAIRPFGROUP_H_)

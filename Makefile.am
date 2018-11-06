@@ -20,5 +20,6 @@ include_HEADERS=inc/sai.h inc/saiacl.h  inc/saibridge.h inc/saibuffer.h  inc/sai
                 inc/saischeduler.h  inc/saischedulergroup.h  inc/saistatus.h \
                 inc/saistp.h inc/saiswitch.h  inc/saitunnel.h inc/saitypes.h inc/saiudf.h inc/saivlan.h inc/saiwred.h \
                 inc/saihostif.h inc/saimcastfdb.h inc/saimpls.h inc/sairouterinterface.h \
-                inc/saisegmentroute.h inc/saitam.h inc/saiuburst.h inc/saivirtualrouter.h
-
+                inc/saisegmentroute.h inc/saitam.h inc/saiuburst.h inc/saivirtualrouter.h \
+                experimental/saiaclextensions.h  experimental/saiextensionaclslice.h  experimental/saiextensions.h \
+		experimental/saiswitchextensions.h  experimental/saitypesextensions.h

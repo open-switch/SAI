@@ -21,12 +21,12 @@
 #include "sai_udf_unit_test.h"
 
 extern "C" {
-#include "sai.h"
 #include "saitypes.h"
 #include "saistatus.h"
 #include "saiudf.h"
 }
 
+static bool sai_udf_hash_supported = true;
 /*
  * Validates UDF Group creation and removal for Generic type
  */
@@ -65,14 +65,21 @@ TEST_F (saiUdfTest, create_and_remove_hash_udf_group)
                                         SAI_UDF_GROUP_TYPE_HASH,
                                         SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    if(status == SAI_STATUS_NOT_SUPPORTED) {
+        printf("UDF hash is not supported on this platform");
+        sai_udf_hash_supported = false;
+    } else {
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 
-    /* Verify the UDF Group object using get API */
-    sai_test_udf_group_verify (udf_group_id, SAI_UDF_GROUP_TYPE_HASH, udf_length,
-                               NULL);
-    status = sai_test_udf_group_remove (udf_group_id);
+    if(sai_udf_hash_supported) {
+        /* Verify the UDF Group object using get API */
+        sai_test_udf_group_verify (udf_group_id, SAI_UDF_GROUP_TYPE_HASH, udf_length,
+                                   NULL);
+        status = sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 /*
@@ -246,61 +253,56 @@ TEST_F (saiUdfTest, create_and_remove_hash_udf)
     uint8_t            hash_mask [udf_length] = {0xFF, 0xFF, 0xFF, 0xFF};
     sai_u8_list_t      hash_mask_list = {udf_length, hash_mask};
 
-    status = sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
-                                        SAI_UDF_GROUP_ATTR_TYPE,
-                                        SAI_UDF_GROUP_TYPE_HASH,
-                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
+    if(sai_udf_hash_supported) {
+       status = sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
+                                           SAI_UDF_GROUP_ATTR_TYPE, SAI_UDF_GROUP_TYPE_HASH,
+                                           SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
-                                        SAI_UDF_MATCH_ATTR_L2_TYPE,
-                                        0x0800, 0xFFFF,
-                                        SAI_UDF_MATCH_ATTR_L3_TYPE,
-                                        0x2F, 0xFF,
-                                        SAI_UDF_MATCH_ATTR_GRE_TYPE,
-                                        0x0800, 0xFFFF);
+        status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
+                                            SAI_UDF_MATCH_ATTR_L2_TYPE, 0x0800, 0xFFFF,
+                                            SAI_UDF_MATCH_ATTR_L3_TYPE, 0x2F, 0xFF,
+                                            SAI_UDF_MATCH_ATTR_GRE_TYPE, 0x0800, 0xFFFF);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the UDF Match object using get API */
-    sai_test_udf_match_verify (udf_match_id, match_attr_count,
-                               SAI_UDF_MATCH_ATTR_L2_TYPE,
-                               0x0800, 0xFFFF,
-                               SAI_UDF_MATCH_ATTR_L3_TYPE,
-                               0x2F, 0xFF,
-                               SAI_UDF_MATCH_ATTR_GRE_TYPE,
-                               0x0800, 0xFFFF);
+        /* Verify the UDF Match object using get API */
+        sai_test_udf_match_verify (udf_match_id, match_attr_count,
+                                   SAI_UDF_MATCH_ATTR_L2_TYPE, 0x0800, 0xFFFF,
+                                   SAI_UDF_MATCH_ATTR_L3_TYPE, 0x2F, 0xFF,
+                                   SAI_UDF_MATCH_ATTR_GRE_TYPE, 0x0800, 0xFFFF);
 
-    status = sai_test_udf_create (udf_list.list, NULL, default_udf_attr_count,
-                                  SAI_UDF_ATTR_MATCH_ID, udf_match_id,
-                                  SAI_UDF_ATTR_GROUP_ID, udf_group_id,
-                                  SAI_UDF_ATTR_OFFSET, offset);
+        status = sai_test_udf_create (udf_list.list, NULL, default_udf_attr_count,
+                                      SAI_UDF_ATTR_MATCH_ID, udf_match_id,
+                                      SAI_UDF_ATTR_GROUP_ID, udf_group_id,
+                                      SAI_UDF_ATTR_OFFSET, offset);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the UDF object using get API */
-    sai_test_udf_verify (udf_id, udf_match_id, udf_group_id,
-                         SAI_UDF_BASE_L2, offset);
+        /* Verify the UDF object using get API */
+        sai_test_udf_verify (udf_id, udf_match_id, udf_group_id,
+                             SAI_UDF_BASE_L2, offset);
 
-    /* Verify the default UDF Hash mask using get API */
-    sai_test_udf_hash_mask_verify (udf_id, &hash_mask_list);
+        /* Verify the default UDF Hash mask using get API */
+        sai_test_udf_hash_mask_verify (udf_id, &hash_mask_list);
 
-    /* Verify the UDF Group contains the UDF object */
-    sai_test_udf_group_verify (udf_group_id, SAI_UDF_GROUP_TYPE_HASH, udf_length,
-                               &udf_list);
+        /* Verify the UDF Group contains the UDF object */
+        sai_test_udf_group_verify (udf_group_id, SAI_UDF_GROUP_TYPE_HASH, udf_length,
+                &udf_list);
 
-    status = sai_test_udf_remove (udf_id);
+        status = sai_test_udf_remove (udf_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_group_remove (udf_group_id);
+        status = sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_match_remove (udf_match_id);
+        status = sai_test_udf_match_remove (udf_match_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 /*
@@ -323,59 +325,51 @@ TEST_F (saiUdfTest, create_udf_with_udf_hash_mask)
     sai_u8_list_t      hash_mask_list = {udf_length, hash_mask};
 
 
-    status = sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
-                                        SAI_UDF_GROUP_ATTR_TYPE,
-                                        SAI_UDF_GROUP_TYPE_HASH,
-                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
+    if(sai_udf_hash_supported) {
+        status = sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
+                                            SAI_UDF_GROUP_ATTR_TYPE, SAI_UDF_GROUP_TYPE_HASH,
+                                            SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
-                                        SAI_UDF_MATCH_ATTR_L2_TYPE,
-                                        0x0800, 0xFFFF,
-                                        SAI_UDF_MATCH_ATTR_L3_TYPE,
-                                        0x2F, 0xFF,
-                                        SAI_UDF_MATCH_ATTR_GRE_TYPE,
-                                        0x0800, 0xFFFF);
+        status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
+                                            SAI_UDF_MATCH_ATTR_L2_TYPE, 0x0800, 0xFFFF,
+                                            SAI_UDF_MATCH_ATTR_L3_TYPE, 0x2F, 0xFF,
+                                            SAI_UDF_MATCH_ATTR_GRE_TYPE, 0x0800, 0xFFFF);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the UDF Match object using get API */
-    sai_test_udf_match_verify (udf_match_id, match_attr_count,
-                               SAI_UDF_MATCH_ATTR_L2_TYPE,
-                               0x0800, 0xFFFF,
-                               SAI_UDF_MATCH_ATTR_L3_TYPE,
-                               0x2F, 0xFF,
-                               SAI_UDF_MATCH_ATTR_GRE_TYPE,
-                               0x0800, 0xFFFF);
+        /* Verify the UDF Match object using get API */
+        sai_test_udf_match_verify (udf_match_id, match_attr_count, SAI_UDF_MATCH_ATTR_L2_TYPE,
+                                   0x0800, 0xFFFF, SAI_UDF_MATCH_ATTR_L3_TYPE, 0x2F, 0xFF,
+                                   SAI_UDF_MATCH_ATTR_GRE_TYPE, 0x0800, 0xFFFF);
 
-    status = sai_test_udf_create (&udf_id, &hash_mask_list, udf_attr_count,
-                                  SAI_UDF_ATTR_MATCH_ID, udf_match_id,
-                                  SAI_UDF_ATTR_GROUP_ID, udf_group_id,
-                                  SAI_UDF_ATTR_BASE, SAI_UDF_BASE_L3,
-                                  SAI_UDF_ATTR_OFFSET, offset,
-                                  SAI_UDF_ATTR_HASH_MASK);
+        status = sai_test_udf_create (&udf_id, &hash_mask_list, udf_attr_count, SAI_UDF_ATTR_MATCH_ID,
+                                      udf_match_id, SAI_UDF_ATTR_GROUP_ID, udf_group_id,
+                                      SAI_UDF_ATTR_BASE, SAI_UDF_BASE_L3, SAI_UDF_ATTR_OFFSET, offset,
+                                      SAI_UDF_ATTR_HASH_MASK);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the UDF object using get API */
-    sai_test_udf_verify (udf_id, udf_match_id, udf_group_id,
-                         SAI_UDF_BASE_L3, offset);
+        /* Verify the UDF object using get API */
+        sai_test_udf_verify (udf_id, udf_match_id, udf_group_id,
+                SAI_UDF_BASE_L3, offset);
 
-    /* Verify the UDF Hash mask bytes using get API */
-    sai_test_udf_hash_mask_verify (udf_id, &hash_mask_list);
+        /* Verify the UDF Hash mask bytes using get API */
+        sai_test_udf_hash_mask_verify (udf_id, &hash_mask_list);
 
-    status = sai_test_udf_remove (udf_id);
+        status = sai_test_udf_remove (udf_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_group_remove (udf_group_id);
+        status = sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_match_remove (udf_match_id);
+        status = sai_test_udf_match_remove (udf_match_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 /*
@@ -397,60 +391,60 @@ TEST_F (saiUdfTest, set_udf_hash_mask)
     uint8_t            reset_value [udf_length] = {0, 0};
     sai_attribute_t    attr;
 
-    memset (&attr, 0, sizeof (sai_attribute_t));
+    if(sai_udf_hash_supported) {
+        memset (&attr, 0, sizeof (sai_attribute_t));
 
-    attr.id = SAI_UDF_ATTR_HASH_MASK;
+        attr.id = SAI_UDF_ATTR_HASH_MASK;
 
-    status = sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
-                                        SAI_UDF_GROUP_ATTR_TYPE,
-                                        SAI_UDF_GROUP_TYPE_HASH,
-                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
+        status = sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
+                                            SAI_UDF_GROUP_ATTR_TYPE, SAI_UDF_GROUP_TYPE_HASH,
+                                            SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
-                                        SAI_UDF_MATCH_ATTR_L2_TYPE,
-                                        0x8100, 0xFFFF);
+        status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
+                                            SAI_UDF_MATCH_ATTR_L2_TYPE, 0x8100, 0xFFFF);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_create (&udf_id, NULL, udf_attr_count,
-                                  SAI_UDF_ATTR_MATCH_ID, udf_match_id,
-                                  SAI_UDF_ATTR_GROUP_ID, udf_group_id,
-                                  SAI_UDF_ATTR_OFFSET, offset);
+        status = sai_test_udf_create (&udf_id, NULL, udf_attr_count,
+                                      SAI_UDF_ATTR_MATCH_ID, udf_match_id,
+                                      SAI_UDF_ATTR_GROUP_ID, udf_group_id,
+                                      SAI_UDF_ATTR_OFFSET, offset);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Set UDF Hash mask to the UDF */
-    attr.value.u8list.count = udf_length;
-    attr.value.u8list.list  = set_value;
-    status = udf_api_tbl_get()->set_udf_attribute (udf_id, &attr);
+        /* Set UDF Hash mask to the UDF */
+        attr.value.u8list.count = udf_length;
+        attr.value.u8list.list  = set_value;
+        status = udf_api_tbl_get()->set_udf_attribute (udf_id, &attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the UDF Hash mask bytes using get API */
-    sai_test_udf_hash_mask_verify (udf_id, &attr.value.u8list);
+        /* Verify the UDF Hash mask bytes using get API */
+        sai_test_udf_hash_mask_verify (udf_id, &attr.value.u8list);
 
-    /* Reset the UDF Hash mask to stop hashing based on VLAN Id */
-    attr.value.u8list.list  = reset_value;
-    status = udf_api_tbl_get()->set_udf_attribute (udf_id, &attr);
+        /* Reset the UDF Hash mask to stop hashing based on VLAN Id */
+        attr.value.u8list.list  = reset_value;
+        status = udf_api_tbl_get()->set_udf_attribute (udf_id, &attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the UDF Hash mask bytes are reset using get API */
-    sai_test_udf_hash_mask_verify (udf_id, &attr.value.u8list);
+        /* Verify the UDF Hash mask bytes are reset using get API */
+        sai_test_udf_hash_mask_verify (udf_id, &attr.value.u8list);
 
-    status = sai_test_udf_remove (udf_id);
+        status = sai_test_udf_remove (udf_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_group_remove (udf_group_id);
+        status = sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_match_remove (udf_match_id);
+        status = sai_test_udf_match_remove (udf_match_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 /*
@@ -624,24 +618,25 @@ TEST_F (saiUdfTest, udf_hash_mask_for_generic_udf_group)
     uint8_t            byte_value [byte_count] = {0x21, 0x21};
     sai_u8_list_t      hash_mask_list = {byte_count, byte_value};
 
-    status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
-                                        SAI_UDF_MATCH_ATTR_L2_TYPE,
-                                        0x8100, 0xFFFF);
+    if(sai_udf_hash_supported) {
+        status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
+                SAI_UDF_MATCH_ATTR_L2_TYPE,
+                0x8100, 0xFFFF);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_create (&udf_id, &hash_mask_list, udf_attr_count,
-                                  SAI_UDF_ATTR_MATCH_ID, udf_match_id,
-                                  SAI_UDF_ATTR_GROUP_ID, dflt_udf_group_id,
-                                  SAI_UDF_ATTR_OFFSET, offset,
-                                  SAI_UDF_ATTR_HASH_MASK);
+        status = sai_test_udf_create (&udf_id, &hash_mask_list, udf_attr_count,
+                                      SAI_UDF_ATTR_MATCH_ID, udf_match_id,
+                                      SAI_UDF_ATTR_GROUP_ID, dflt_udf_group_id,
+                                      SAI_UDF_ATTR_OFFSET, offset, SAI_UDF_ATTR_HASH_MASK);
 
-    EXPECT_TRUE (SAI_STATUS_SUCCESS != status);
-    EXPECT_TRUE (udf_id == SAI_NULL_OBJECT_ID);
+        EXPECT_TRUE (SAI_STATUS_SUCCESS != status);
+        EXPECT_TRUE (udf_id == SAI_NULL_OBJECT_ID);
 
-    status = sai_test_udf_match_remove (udf_match_id);
+        status = sai_test_udf_match_remove (udf_match_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 /*
@@ -661,39 +656,39 @@ TEST_F (saiUdfTest, invalid_udf_hash_mask)
     uint8_t            byte_value [byte_count] = {0x21, 0x21};
     sai_u8_list_t      hash_mask_list = {byte_count, byte_value};
 
-    status = sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
-                                        SAI_UDF_GROUP_ATTR_TYPE,
-                                        SAI_UDF_GROUP_TYPE_HASH,
-                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
+    if(sai_udf_hash_supported) {
+        status = sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
+                                            SAI_UDF_GROUP_ATTR_TYPE, SAI_UDF_GROUP_TYPE_HASH,
+                                            SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
-                                        SAI_UDF_MATCH_ATTR_L2_TYPE,
-                                        0x8100, 0xFFFF);
+        status = sai_test_udf_match_create (&udf_match_id, match_attr_count,
+                                            SAI_UDF_MATCH_ATTR_L2_TYPE, 0x8100, 0xFFFF);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the UDF Match object using get API */
-    sai_test_udf_match_verify (udf_match_id, match_attr_count,
-                               SAI_UDF_MATCH_ATTR_L2_TYPE, 0x8100, 0xFFFF);
+        /* Verify the UDF Match object using get API */
+        sai_test_udf_match_verify (udf_match_id, match_attr_count,
+                                   SAI_UDF_MATCH_ATTR_L2_TYPE, 0x8100, 0xFFFF);
 
-    status = sai_test_udf_create (&udf_id, &hash_mask_list, udf_attr_count,
-                                  SAI_UDF_ATTR_MATCH_ID, udf_match_id,
-                                  SAI_UDF_ATTR_GROUP_ID, udf_group_id,
-                                  SAI_UDF_ATTR_OFFSET, offset,
-                                  SAI_UDF_ATTR_HASH_MASK);
+        status = sai_test_udf_create (&udf_id, &hash_mask_list, udf_attr_count,
+                                      SAI_UDF_ATTR_MATCH_ID, udf_match_id,
+                                      SAI_UDF_ATTR_GROUP_ID, udf_group_id,
+                                      SAI_UDF_ATTR_OFFSET, offset,
+                                      SAI_UDF_ATTR_HASH_MASK);
 
-    EXPECT_TRUE (SAI_STATUS_SUCCESS != status);
-    EXPECT_TRUE (udf_id == SAI_NULL_OBJECT_ID);
+        EXPECT_TRUE (SAI_STATUS_SUCCESS != status);
+        EXPECT_TRUE (udf_id == SAI_NULL_OBJECT_ID);
 
-    status = sai_test_udf_group_remove (udf_group_id);
+        status = sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_udf_match_remove (udf_match_id);
+        status = sai_test_udf_match_remove (udf_match_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 int main (int argc, char **argv)

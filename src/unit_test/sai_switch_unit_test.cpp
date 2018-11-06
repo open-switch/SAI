@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include "gtest/gtest.h"
 #include "sai_port_breakout_test_utils.h"
-
+#include "saiswitchextensions.h"
 
 extern "C" {
 #include "sai.h"
@@ -777,3 +777,44 @@ TEST_F(switchInit, max_port_mtu_get)
     LOG_PRINT("Maximum PORT mtu is %d \r\n", sai_attr_get.value.u32);
 }
 
+/*
+ * Get and print the list of ACL slice objects in the switch
+ */
+TEST_F(switchInit, attr_acl_slice_list_get)
+{
+    sai_attribute_t get_attr;
+    uint32_t count = 0;
+    sai_status_t ret = SAI_STATUS_FAILURE;
+
+    memset(&get_attr, 0, sizeof(get_attr));
+    get_attr.id = SAI_SWITCH_ATTR_EXTENSIONS_ACL_SLICE_LIST;
+
+    get_attr.value.objlist.count = 1;
+    get_attr.value.objlist.list = (sai_object_id_t *) calloc(1,
+            sizeof(sai_object_id_t));
+    ASSERT_TRUE(get_attr.value.objlist.list != NULL);
+
+    ret = sai_switch_api_table->get_switch_attribute(switch_id,1, &get_attr);
+
+    /* Handles buffer overflow case, by reallocating required memory */
+    if(ret == SAI_STATUS_BUFFER_OVERFLOW ) {
+        free(get_attr.value.objlist.list);
+        get_attr.value.objlist.list = (sai_object_id_t *)calloc (get_attr.value.objlist.count,
+                sizeof(sai_object_id_t));
+        ret = sai_switch_api_table->get_switch_attribute(switch_id,1, &get_attr);
+    }
+
+    if(ret != SAI_STATUS_SUCCESS) {
+        free(get_attr.value.objlist.list);
+        ASSERT_EQ(SAI_STATUS_SUCCESS, ret);
+    } else {
+
+        LOG_PRINT("ACL slice list count is %d \r\n", get_attr.value.objlist.count);
+
+        for(count = 0; count < get_attr.value.objlist.count; count++) {
+            LOG_PRINT("ACL slice list id %d is %lu \r\n", count, get_attr.value.objlist.list[count]);
+        }
+
+        free(get_attr.value.objlist.list);
+    }
+}

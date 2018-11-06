@@ -21,7 +21,7 @@ extern "C" {
 }
 #define SAI_LOCAL_SPAN_NO_OF_MANDAT_ATTRIB 2
 #define SAI_REMOTE_SPAN_NO_OF_MANDAT_ATTRIB 5
-#define SAI_ER_SPAN_NO_OF_MANDAT_ATTRIB 13
+#define SAI_ER_SPAN_NO_OF_MANDAT_ATTRIB 14
 
 TEST_F(mirrorTest, span_set) {
     sai_status_t sai_rc = SAI_STATUS_SUCCESS;
@@ -636,6 +636,8 @@ TEST_F(mirrorTest, erspan_set) {
     attr[11].value.u16 = 35006;
     attr[12].id =  SAI_MIRROR_SESSION_ATTR_TYPE;
     attr[12].value.s32 = SAI_MIRROR_SESSION_TYPE_ENHANCED_REMOTE;
+    attr[13].id = SAI_MIRROR_SESSION_ATTR_VLAN_HEADER_VALID;
+    attr[13].value.booldata = true;
 
     sai_rc = sai_test_mirror_session_create (&session_id, SAI_ER_SPAN_NO_OF_MANDAT_ATTRIB, attr);
 
@@ -906,6 +908,8 @@ TEST_F(mirrorTest, erspan_attrib_set) {
     attr[12].value.mac[3] = 68;
     attr[12].value.mac[4] = 68;
     attr[12].value.mac[5] = 68;
+    attr[13].id = SAI_MIRROR_SESSION_ATTR_VLAN_HEADER_VALID;
+    attr[13].value.booldata = true;
 
     sai_rc = sai_test_mirror_session_create (&session_id, SAI_ER_SPAN_NO_OF_MANDAT_ATTRIB, attr);
 

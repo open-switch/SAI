@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell EMC, Facebook Inc., Marvell International Ltd.
+ *    Dell EMC, Facebook, Inc., Marvell International Ltd.
  *
  * @file    sailag.h
  *
@@ -146,9 +146,9 @@ typedef enum _sai_lag_attr_t
  * @param[in] attr_count Number of attributes
  * @param[in] attr_list Array of attributes
  *
- * @return #SAI_STATUS_SUCCESS on success Failure status code on error
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
  */
-typedef sai_status_t(*sai_create_lag_fn)(
+typedef sai_status_t (*sai_create_lag_fn)(
         _Out_ sai_object_id_t *lag_id,
         _In_ sai_object_id_t switch_id,
         _In_ uint32_t attr_count,

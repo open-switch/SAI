@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell EMC, Facebook Inc., Marvell International Ltd.
+ *    Dell EMC, Facebook, Inc., Marvell International Ltd.
  *
  * @file    saibridge.h
  *
@@ -252,6 +252,36 @@ typedef enum _sai_bridge_port_attr_t
 
     /** Custom range base value */
     SAI_BRIDGE_PORT_ATTR_CUSTOM_RANGE_START = 0x10000000,
+    /**
+     * @brief Ingress Split Horizon ID.
+     *
+     * If ingress split horizon id of ingress bridge port is equal to egress split horizon id of
+     * egress bridge port, then packets should be discarded. Valid non-zero split horizon id range
+     * can be queried using the switch attribute SAI_SWITCH_ATTR_SPLIT_HORIZON_ID_RANGE.
+     * With the default zero split horizon id, split horizon checks are not performed.
+     *
+     * @type sai_uint32_t
+     * @flags CREATE_AND_SET
+     * @default 0
+     * @validonly SAI_BRIDGE_PORT_ATTR_TYPE == SAI_BRIDGE_PORT_TYPE_SUB_PORT or SAI_BRIDGE_PORT_ATTR_TYPE == SAI_BRIDGE_PORT_TYPE_TUNNEL
+     */
+    SAI_BRIDGE_PORT_ATTR_INGRESS_SPLIT_HORIZON_ID,
+
+
+    /**
+     * @brief Egress Split Horizon ID.
+     *
+     * If ingress split horizon id of ingress bridge port is equal to egress split horizon id of
+     * egress bridge port, then packets should be discarded. Valid non-zero split horizon id range
+     * can be queried using the switch attribute SAI_SWITCH_ATTR_SPLIT_HORIZON_ID_RANGE.
+     * With the default zero split horizon id, split horizon checks are not performed.
+     *
+     * @type sai_uint32_t
+     * @flags CREATE_AND_SET
+     * @default 0
+     * @validonly SAI_BRIDGE_PORT_ATTR_TYPE == SAI_BRIDGE_PORT_TYPE_SUB_PORT or SAI_BRIDGE_PORT_ATTR_TYPE == SAI_BRIDGE_PORT_TYPE_TUNNEL
+     */
+    SAI_BRIDGE_PORT_ATTR_EGRESS_SPLIT_HORIZON_ID,
 
     /** End of custom range base */
     SAI_BRIDGE_PORT_ATTR_CUSTOM_RANGE_END

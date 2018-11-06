@@ -87,6 +87,17 @@ class saiTunnelTest : public ::testing::Test
                                                           va_list *p_varg_list,
                                                           sai_attribute_t *p_attr_list);
 
+        /*Methods for bridge stats functionality for SAI API testing */
+        static sai_status_t sai_test_bridge_port_stats_get (sai_object_id_t bridge_port_id,
+                                                       unsigned int stats_count, ...);
+
+        static sai_status_t sai_test_bridge_port_stats_clear (sai_object_id_t bridge_port_id,
+                                                       unsigned int stats_count, ...);
+
+        static void sai_test_bridge_port_stats_type_fill (unsigned int stats_count,
+                                                     va_list *p_varg_list,
+                                                     sai_bridge_port_stat_t *bridge_port_stats_list);
+
         /* Methods for Tunnel Termination Entry SAI API testing. */
         static sai_status_t sai_test_tunnel_term_entry_create(sai_object_id_t *tunnel_term_id,
                                                unsigned int attr_count, ...);

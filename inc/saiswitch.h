@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell EMC, Facebook Inc., Marvell International Ltd.
+ *    Dell EMC, Facebook, Inc., Marvell International Ltd.
  *
  * @file    saiswitch.h
  *
@@ -1550,6 +1550,16 @@ typedef enum _sai_switch_attr_t
 
     /** Custom range base value */
     SAI_SWITCH_ATTR_CUSTOM_RANGE_START = 0x10000000,
+
+    /**
+     * @brief Split Horizon ID range
+     *
+     * The range should start from a non-zero value.
+     *
+     * @type sai_u32_range_t
+     * @flags READ_ONLY
+     */
+    SAI_SWITCH_ATTR_SPLIT_HORIZON_ID_RANGE,
 
     /** End of custom range base */
     SAI_SWITCH_ATTR_CUSTOM_RANGE_END
