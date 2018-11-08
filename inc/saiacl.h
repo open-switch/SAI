@@ -15,7 +15,7 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell EMC, Facebook Inc., Marvell International Ltd.
+ *    Dell EMC, Facebook, Inc., Marvell International Ltd.
  *
  * @file    saiacl.h
  *
@@ -118,7 +118,7 @@ typedef enum _sai_acl_action_type_t
     /** Egress Mirror */
     SAI_ACL_ACTION_TYPE_MIRROR_EGRESS,
 
-    /** Associate with policer (policer id) */
+    /** Associate with policer */
     SAI_ACL_ACTION_TYPE_SET_POLICER,
 
     /** Decrement TTL */
@@ -190,7 +190,7 @@ typedef enum _sai_acl_action_type_t
     /** Set user defined trap id */
     SAI_ACL_ACTION_TYPE_SET_USER_TRAP_ID,
 
-    /** Set Do Not Learn unknown source MAC*/
+    /** Set Do Not Learn unknown source MAC */
     SAI_ACL_ACTION_TYPE_SET_DO_NOT_LEARN,
 
 } sai_acl_action_type_t;
@@ -229,11 +229,11 @@ typedef enum _sai_acl_table_group_attr_t
     /**
      * @brief List of ACL bind points where this group will be applied.
      *
-     * ACL group bind point list - is a create only attribute required for ACL
+     * ACL group bind point list - create only attribute required for ACL
      * groups to let the user specify his intention to allow further error
-     * checks and optimizations based on a specific ASIC's SAI implementation.
+     * checks and optimizations based on a specific ASIC SAI implementation.
      * ACL members being added to this group SHOULD be a subset of the bind
-     * point list that acl group was created with.
+     * point list that ACL group was created with.
      *
      * @type sai_s32_list_t sai_acl_bind_point_type_t
      * @flags CREATE_ONLY
@@ -919,9 +919,18 @@ typedef enum _sai_acl_table_attr_t
     SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER,
 
     /**
+     * @brief Bridge Type
+     *
+     * @type bool
+     * @flags CREATE_ONLY
+     * @default false
+     */
+    SAI_ACL_TABLE_ATTR_FIELD_BRIDGE_TYPE,
+
+    /**
      * @brief End of ACL Table Match Field
      */
-    SAI_ACL_TABLE_ATTR_FIELD_END = SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER,
+    SAI_ACL_TABLE_ATTR_FIELD_END = SAI_ACL_TABLE_ATTR_FIELD_BRIDGE_TYPE,
 
     /**
      * @brief ACL table entries associated with this table.
@@ -986,7 +995,7 @@ typedef enum _sai_acl_table_attr_t
     /**
      * @brief End of Custom range base
      */
-    SAI_ACL_TABLE_ATTR_CUSTOM_RANGE_END = SAI_ACL_TABLE_ATTR_GROUP_ID
+    SAI_ACL_TABLE_ATTR_CUSTOM_RANGE_END
 
 } sai_acl_table_attr_t;
 
@@ -1560,9 +1569,22 @@ typedef enum _sai_acl_entry_attr_t
     SAI_ACL_ENTRY_ATTR_FIELD_IPV6_NEXT_HEADER,
 
     /**
+     * @brief Bridge Type (field mask is not needed)
+     *
+     * This is to qualify the bridge type of the packet.
+     * The value will be of type sai_bridge_type_t
+     * Example: SAI_BRIDGE_TYPE_1Q or SAI_BRIDGE_TYPE_1D.
+     *
+     * @type sai_acl_field_data_t sai_int32_t
+     * @flags CREATE_AND_SET
+     * @default disabled
+     */
+    SAI_ACL_ENTRY_ATTR_FIELD_BRIDGE_TYPE,
+
+    /**
      * @brief End of Rule Match Fields
      */
-    SAI_ACL_ENTRY_ATTR_FIELD_END = SAI_ACL_ENTRY_ATTR_FIELD_IPV6_NEXT_HEADER,
+    SAI_ACL_ENTRY_ATTR_FIELD_END = SAI_ACL_ENTRY_ATTR_FIELD_BRIDGE_TYPE,
 
     /*
      * Actions [sai_acl_action_data_t]
@@ -1640,17 +1662,19 @@ typedef enum _sai_acl_entry_attr_t
      * @brief Egress Mirror (mirror session id list)
      *
      * @type sai_acl_action_data_t sai_object_list_t
-     * @objects SAI_OBJECT_TYPE_MIRROR_SESSION
      * @flags CREATE_AND_SET
+     * @objects SAI_OBJECT_TYPE_MIRROR_SESSION
+     * @default disabled
      */
     SAI_ACL_ENTRY_ATTR_ACTION_MIRROR_EGRESS,
 
     /**
-     * @brief Associate with policer (policer id)
+     * @brief Associate with policer
      *
      * @type sai_acl_action_data_t sai_object_id_t
-     * @objects SAI_OBJECT_TYPE_POLICER
      * @flags CREATE_AND_SET
+     * @objects SAI_OBJECT_TYPE_POLICER
+     * @default disabled
      */
     SAI_ACL_ENTRY_ATTR_ACTION_SET_POLICER,
 
@@ -2377,6 +2401,20 @@ typedef sai_status_t (*sai_get_acl_table_group_member_attribute_fn)(
         _Out_ sai_attribute_t *attr_list);
 
 /**
+ * @brief Get ACL slice attribute
+ *
+ * @param[in] acl_slice_id ACL slice id
+ * @param[in] attr_count Number of attributes
+ * @param[inout] attr_list Array of attributes
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_get_acl_slice_attribute_fn)(
+        _In_ sai_object_id_t acl_slice_id,
+        _In_ uint32_t attr_count,
+        _Inout_ sai_attribute_t *attr_list);
+
+/**
  * @brief Port methods table retrieved with sai_api_query()
  */
 typedef struct _sai_acl_api_t
@@ -2405,6 +2443,7 @@ typedef struct _sai_acl_api_t
     sai_remove_acl_table_group_member_fn        remove_acl_table_group_member;
     sai_set_acl_table_group_member_attribute_fn set_acl_table_group_member_attribute;
     sai_get_acl_table_group_member_attribute_fn get_acl_table_group_member_attribute;
+    sai_get_acl_slice_attribute_fn              get_acl_slice_attribute;
 } sai_acl_api_t;
 
 /**

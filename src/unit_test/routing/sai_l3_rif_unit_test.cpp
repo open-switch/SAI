@@ -1376,6 +1376,157 @@ TEST_F (saiL3RifTest, rif_lag_member_update)
                 sai_l3_port_id_get(5)));
 }
 
+TEST_F (saiL3RifTest, 1d_bridge_rif_operations)
+{
+    sai_status_t sai_rc = SAI_STATUS_SUCCESS;
+    sai_object_id_t vr_id_with_src_mac = SAI_NULL_OBJECT_ID;
+    sai_object_id_t rif_id = SAI_NULL_OBJECT_ID;
+    char vrf_mac_str[] = "00:00:00:00:aa:aa";
+    char rif_mac_str[] = "00:00:00:00:bb:bb";
+    sai_attribute_t attr={0};
+    sai_mac_t vrf_mac, rif_mac;
+
+    /*Create with src mac attribute*/
+    sai_rc = sai_test_vrf_create (&vr_id_with_src_mac, 1,
+                                  SAI_VIRTUAL_ROUTER_ATTR_SRC_MAC_ADDRESS,
+                                  vrf_mac_str);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Create 1D Bridge RIF*/
+    sai_rc = sai_test_rif_create (&rif_id, 2,
+                                  SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID,
+                                  vr_id_with_src_mac,
+                                  SAI_ROUTER_INTERFACE_ATTR_TYPE,
+                                  SAI_ROUTER_INTERFACE_TYPE_BRIDGE);
+
+    if((sai_rc == SAI_STATUS_NOT_SUPPORTED) ||
+       ((SAI_STATUS_CODE(sai_rc) & ~0xFFFF) ==
+         SAI_STATUS_CODE(SAI_STATUS_ATTR_NOT_SUPPORTED_0))) {
+        printf("Bridge RIF creation not suported\r\n");
+        sai_rc = sai_test_vrf_remove (vr_id_with_src_mac);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        return;
+    }
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Check if the src mac of vrf is inherited in the rif*/
+    sai_rc = sai_test_rif_attr_get (rif_id, &attr, 1,
+                                    SAI_ROUTER_INTERFACE_ATTR_SRC_MAC_ADDRESS);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_test_router_mac_str_to_bytes_get(vrf_mac_str,vrf_mac);
+    EXPECT_EQ (0, (memcmp (vrf_mac, attr.value.mac, sizeof (sai_mac_t))));
+
+    /*Set Source MAC in 1D RIF*/
+    sai_rc = sai_test_rif_attr_set(rif_id, SAI_ROUTER_INTERFACE_ATTR_SRC_MAC_ADDRESS,
+                                   0, rif_mac_str);
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Check if the src mac in the rif has been updated*/
+    sai_rc = sai_test_rif_attr_get (rif_id, &attr, 1,
+                                    SAI_ROUTER_INTERFACE_ATTR_SRC_MAC_ADDRESS);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_test_router_mac_str_to_bytes_get(rif_mac_str, rif_mac);
+    EXPECT_EQ (0, (memcmp (rif_mac, attr.value.mac, sizeof (sai_mac_t))));
+
+    /* Remove the 1D RIF. */
+    sai_rc = sai_test_rif_remove (rif_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /* Remove the vrf. */
+    sai_rc = sai_test_vrf_remove (vr_id_with_src_mac);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+}
+
+TEST_F (saiL3RifTest, 1d_bridge_rif_optional_attr_set)
+{
+    sai_status_t  sai_rc = SAI_STATUS_SUCCESS;
+    sai_object_id_t rif_id = SAI_NULL_OBJECT_ID;
+    sai_mac_t     sai_mac;
+    unsigned int  expected_mtu = SAI_TEST_MTU_DFLT;
+    unsigned int  idx = 0;
+    bool          v4_state [3] = {false, true, saiL3Test::SAI_TEST_V4_ADMIN_STATE_DFLT};
+    bool          v6_state [3] = {false, true, saiL3Test::SAI_TEST_V4_ADMIN_STATE_DFLT};
+    unsigned int  mtu [3] = {5000, 9000, SAI_TEST_MTU_DFLT};
+    const char   *mac [3] = {"00:00:00:00:cc:cc", "00:00:00:00:dd:dd",
+                             router_mac};
+    unsigned int  v4_admin_state = 1;
+    unsigned int  v6_admin_state = 1;
+    const char    *mac_str = "00:00:00:00:bb:bb";
+
+    /* Create a VLAN RIF */
+    sai_rc = sai_test_rif_create (&rif_id, 6,
+                                  SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID,
+                                  vr_id_with_all_attr,
+                                  SAI_ROUTER_INTERFACE_ATTR_TYPE,
+                                  SAI_ROUTER_INTERFACE_TYPE_BRIDGE,
+                                  SAI_ROUTER_INTERFACE_ATTR_SRC_MAC_ADDRESS,
+                                  mac_str,
+                                  SAI_ROUTER_INTERFACE_ATTR_ADMIN_V4_STATE,
+                                  v4_admin_state,
+                                  SAI_ROUTER_INTERFACE_ATTR_ADMIN_V6_STATE,
+                                  v6_admin_state,
+                                  SAI_ROUTER_INTERFACE_ATTR_MTU,
+                                  3000);
+
+    if((sai_rc == SAI_STATUS_NOT_SUPPORTED) ||
+       ((SAI_STATUS_CODE(sai_rc) & ~0xFFFF) ==
+         SAI_STATUS_CODE(SAI_STATUS_ATTR_NOT_SUPPORTED_0))) {
+       printf("Bridge RIF creation not suported\r\n");
+       return;
+    }
+
+    /* Modify RIF attributes using SET API and verify using GET API */
+    for (idx = 0; idx < 3; idx++) {
+        sai_rc =
+            sai_test_rif_attr_set (rif_id,
+                                   SAI_ROUTER_INTERFACE_ATTR_ADMIN_V4_STATE,
+                                   v4_state [idx], 0);
+
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        sai_rc =
+            sai_test_rif_attr_set (rif_id,
+                                   SAI_ROUTER_INTERFACE_ATTR_ADMIN_V6_STATE,
+                                   v6_state [idx], 0);
+
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        sai_rc =
+            sai_test_rif_attr_set (rif_id,
+                                   SAI_ROUTER_INTERFACE_ATTR_SRC_MAC_ADDRESS,
+                                   0, mac [idx]);
+
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        sai_test_router_mac_str_to_bytes_get (mac [idx], sai_mac);
+
+        sai_test_rif_optional_attr_verify (rif_id, sai_mac,
+                                           v4_state [idx], v6_state [idx]);
+
+        sai_rc =
+            sai_test_rif_attr_set (rif_id, SAI_ROUTER_INTERFACE_ATTR_MTU,
+                                   mtu [idx], 0);
+
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        if (sai_rc == SAI_STATUS_SUCCESS) {
+            expected_mtu = mtu [idx];
+
+            sai_test_rif_mtu_attr_verify (rif_id, expected_mtu);
+        }
+    }
+
+    /* Remove the 1D RIF. */
+    sai_rc = sai_test_rif_remove (rif_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+}
+
 int main (int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);

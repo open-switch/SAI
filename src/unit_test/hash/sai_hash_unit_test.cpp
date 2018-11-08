@@ -29,6 +29,7 @@ extern "C" {
 }
 
 static sai_object_id_t switch_id =0;
+static bool udf_hash_supported = true;
 /*
  * Validates Hash fields for Default ECMP Hash object
  */
@@ -543,29 +544,36 @@ TEST_F (saiHashTest, hash_object_create_remove_udf_fields)
                                                 SAI_UDF_GROUP_ATTR_TYPE,
                                                 SAI_UDF_GROUP_TYPE_HASH,
                                                 SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
-
-        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        if(status == SAI_STATUS_NOT_SUPPORTED) {
+            printf("UDF has is not supported on this platform");
+            udf_hash_supported = false;
+            break;
+        } else {
+            ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        }
     }
 
-    status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
-                                   SAI_HASH_ATTR_UDF_GROUP_LIST);
+    if(udf_hash_supported) {
+        status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
+                                       SAI_HASH_ATTR_UDF_GROUP_LIST);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the Hash object fields */
-    sai_test_hash_verify (hash_id, NULL, &udf_group_list);
+        /* Verify the Hash object fields */
+        sai_test_hash_verify (hash_id, NULL, &udf_group_list);
 
-    /* Remove the Hash object */
-    status = sai_test_hash_remove (hash_id);
-
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
-
-    for (unsigned int count = 0; count < udf_count; count++)
-    {
-        /* Remove the UDF Hash UDF Group */
-        status = saiUdfTest::sai_test_udf_group_remove (udf_group_id[count]);
+        /* Remove the Hash object */
+        status = sai_test_hash_remove (hash_id);
 
         EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+
+        for (unsigned int count = 0; count < udf_count; count++)
+        {
+            /* Remove the UDF Hash UDF Group */
+            status = saiUdfTest::sai_test_udf_group_remove (udf_group_id[count]);
+
+            EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        }
     }
 }
 
@@ -585,100 +593,99 @@ TEST_F (saiHashTest, ipv4_lag_hash_object_udf_field)
     sai_object_id_t    udf_match_id;
     sai_object_id_t    udf_id;
 
-    /* Create UDF Match to match IP packets */
-    status = saiUdfTest::sai_test_udf_match_create (&udf_match_id, attr_count,
-                                                    SAI_UDF_MATCH_ATTR_L2_TYPE,
-                                                    0x0800, 0xFFFF);
+    if(udf_hash_supported) {
+        /* Create UDF Match to match IP packets */
+        status = saiUdfTest::sai_test_udf_match_create (&udf_match_id, attr_count,
+                                                        SAI_UDF_MATCH_ATTR_L2_TYPE,
+                                                        0x0800, 0xFFFF);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Create UDF Hash UDF Group */
-    status = saiUdfTest::sai_test_udf_group_create (&udf_group_id,
-                                                    dflt_udf_grp_attr_count,
-                                                    SAI_UDF_GROUP_ATTR_TYPE,
-                                                    SAI_UDF_GROUP_TYPE_HASH,
-                                                    SAI_UDF_GROUP_ATTR_LENGTH,
-                                                    udf_length);
+        /* Create UDF Hash UDF Group */
+        status = saiUdfTest::sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
+                                                        SAI_UDF_GROUP_ATTR_TYPE,
+                                                        SAI_UDF_GROUP_TYPE_HASH,
+                                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Create UDF to match SIP offset in IP packets */
-    status = saiUdfTest::sai_test_udf_create (&udf_id, NULL, 3,
-                                              SAI_UDF_ATTR_MATCH_ID, udf_match_id,
-                                              SAI_UDF_ATTR_GROUP_ID, udf_group_id,
-                                              SAI_UDF_ATTR_OFFSET, 28);
+        /* Create UDF to match SIP offset in IP packets */
+        status = saiUdfTest::sai_test_udf_create (&udf_id, NULL, 3, SAI_UDF_ATTR_MATCH_ID,
+                                                  udf_match_id, SAI_UDF_ATTR_GROUP_ID, udf_group_id,
+                                                  SAI_UDF_ATTR_OFFSET, 28);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
-                                   SAI_HASH_ATTR_UDF_GROUP_LIST);
+        status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
+                                       SAI_HASH_ATTR_UDF_GROUP_LIST);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the Hash object fields */
-    sai_test_hash_verify (hash_id, NULL, &udf_group_list);
+        /* Verify the Hash object fields */
+        sai_test_hash_verify (hash_id, NULL, &udf_group_list);
 
-    /* Set the IPV4 LAG Hash object id value */
-    switch_attr.id        = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
-    switch_attr.value.oid = hash_id;
+        /* Set the IPV4 LAG Hash object id value */
+        switch_attr.id        = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
+        switch_attr.value.oid = hash_id;
 
-    status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
+        status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Set the IPV4 ECMP Hash object id value */
-    switch_attr.id        = SAI_SWITCH_ATTR_ECMP_HASH_IPV4;
-    switch_attr.value.oid = hash_id;
+        /* Set the IPV4 ECMP Hash object id value */
+        switch_attr.id        = SAI_SWITCH_ATTR_ECMP_HASH_IPV4;
+        switch_attr.value.oid = hash_id;
 
-    status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
+        status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Get the IPV4 LAG Hash object id value */
-    switch_attr.value.oid = SAI_NULL_OBJECT_ID;
-    switch_attr.id = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
+        /* Get the IPV4 LAG Hash object id value */
+        switch_attr.value.oid = SAI_NULL_OBJECT_ID;
+        switch_attr.id = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
 
-    status = switch_api_tbl_get()->get_switch_attribute (switch_id,attr_count, &switch_attr);
+        status = switch_api_tbl_get()->get_switch_attribute (switch_id,attr_count, &switch_attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    EXPECT_EQ (switch_attr.value.oid, hash_id);
+        EXPECT_EQ (switch_attr.value.oid, hash_id);
 
-    /* Reset the IPV4 ECMP Hash object */
-    switch_attr.id        = SAI_SWITCH_ATTR_ECMP_HASH_IPV4;
-    switch_attr.value.oid = SAI_NULL_OBJECT_ID;
+        /* Reset the IPV4 ECMP Hash object */
+        switch_attr.id        = SAI_SWITCH_ATTR_ECMP_HASH_IPV4;
+        switch_attr.value.oid = SAI_NULL_OBJECT_ID;
 
-    status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
+        status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Reset the IPV4 LAG Hash object */
-    switch_attr.id        = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
-    switch_attr.value.oid = SAI_NULL_OBJECT_ID;
+        /* Reset the IPV4 LAG Hash object */
+        switch_attr.id        = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
+        switch_attr.value.oid = SAI_NULL_OBJECT_ID;
 
-    status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
+        status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the Hash object */
-    status = sai_test_hash_remove (hash_id);
+        /* Remove the Hash object */
+        status = sai_test_hash_remove (hash_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the UDF object */
-    status = saiUdfTest::sai_test_udf_remove (udf_id);
+        /* Remove the UDF object */
+        status = saiUdfTest::sai_test_udf_remove (udf_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the UDF Match object */
-    status = saiUdfTest::sai_test_udf_match_remove (udf_match_id);
+        /* Remove the UDF Match object */
+        status = saiUdfTest::sai_test_udf_match_remove (udf_match_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the UDF Hash UDF Group */
-    status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
+        /* Remove the UDF Hash UDF Group */
+        status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 /*
@@ -696,59 +703,60 @@ TEST_F (saiHashTest, default_ecmp_udf_hash_fields_set)
     sai_object_list_t  udf_group_list = {udf_count, &udf_group_id};
     unsigned int       udf_length = 4;
 
-    /* Get the default ECMP Hash object id value */
-    switch_attr.id = SAI_SWITCH_ATTR_ECMP_HASH;
+    if(udf_hash_supported) {
+        /* Get the default ECMP Hash object id value */
+        switch_attr.id = SAI_SWITCH_ATTR_ECMP_HASH;
 
-    status = switch_api_tbl_get()->get_switch_attribute (switch_id,count, &switch_attr);
+        status = switch_api_tbl_get()->get_switch_attribute (switch_id,count, &switch_attr);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the native fields list in the Hash object */
-    status = sai_test_hash_attr_set (switch_attr.value.oid, &native_list, NULL,
-                                     SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST);
+        /* Remove the native fields list in the Hash object */
+        status = sai_test_hash_attr_set (switch_attr.value.oid, &native_list, NULL,
+                SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Set the UDF Hash fields */
-    status = saiUdfTest::sai_test_udf_group_create (
-                                        &udf_group_id, dflt_udf_grp_attr_count,
-                                        SAI_UDF_GROUP_ATTR_TYPE,
-                                        SAI_UDF_GROUP_TYPE_HASH,
-                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
+        /* Set the UDF Hash fields */
+        status = saiUdfTest::sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
+                                                        SAI_UDF_GROUP_ATTR_TYPE,
+                                                        SAI_UDF_GROUP_TYPE_HASH,
+                                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_hash_attr_set (switch_attr.value.oid, NULL, &udf_group_list,
-                                     SAI_HASH_ATTR_UDF_GROUP_LIST);
+        status = sai_test_hash_attr_set (switch_attr.value.oid, NULL, &udf_group_list,
+                                         SAI_HASH_ATTR_UDF_GROUP_LIST);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the UDF fields are set in default Hash object */
-    sai_test_hash_verify (switch_attr.value.oid, NULL, &udf_group_list);
+        /* Verify the UDF fields are set in default Hash object */
+        sai_test_hash_verify (switch_attr.value.oid, NULL, &udf_group_list);
 
-    /* Remove the UDF Hash fields now */
-    udf_group_list.count    = 0;
-    status = sai_test_hash_attr_set (switch_attr.value.oid, NULL, &udf_group_list,
-                                     SAI_HASH_ATTR_UDF_GROUP_LIST);
+        /* Remove the UDF Hash fields now */
+        udf_group_list.count    = 0;
+        status = sai_test_hash_attr_set (switch_attr.value.oid, NULL, &udf_group_list,
+                                         SAI_HASH_ATTR_UDF_GROUP_LIST);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the UDF fields are removed in default Hash object */
-    sai_test_hash_verify (switch_attr.value.oid, &native_list, &udf_group_list);
+        /* Verify the UDF fields are removed in default Hash object */
+        sai_test_hash_verify (switch_attr.value.oid, &native_list, &udf_group_list);
 
-    native_list.count = default_native_fld_count;
-    native_list.list  = default_native_fields;
+        native_list.count = default_native_fld_count;
+        native_list.list  = default_native_fields;
 
-    /* ReSet the native fields list with default values */
-    status = sai_test_hash_attr_set (switch_attr.value.oid, &native_list, NULL,
-                                     SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST);
+        /* ReSet the native fields list with default values */
+        status = sai_test_hash_attr_set (switch_attr.value.oid, &native_list, NULL,
+                                         SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the UDF Group now */
-    status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
+        /* Remove the UDF Group now */
+        status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 /*
@@ -772,68 +780,67 @@ TEST_F (saiHashTest, ipv4_hash_object_native_and_udf_field)
       SAI_NATIVE_HASH_FIELD_IP_PROTOCOL };
     sai_s32_list_t     native_list = {field_count, field_list};
 
-    /* Create UDF Hash UDF Group */
-    status = saiUdfTest::sai_test_udf_group_create (&udf_group_id,
-                                                    dflt_udf_grp_attr_count,
-                                                    SAI_UDF_GROUP_ATTR_TYPE,
-                                                    SAI_UDF_GROUP_TYPE_HASH,
-                                                    SAI_UDF_GROUP_ATTR_LENGTH,
-                                                    udf_length);
+    if(udf_hash_supported) {
+        /* Create UDF Hash UDF Group */
+        status = saiUdfTest::sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
+                                                        SAI_UDF_GROUP_ATTR_TYPE,
+                                                        SAI_UDF_GROUP_TYPE_HASH,
+                                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_hash_create (&hash_id, &native_list, &udf_group_list,
-                                   attr_count,
-                                   SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST,
-                                   SAI_HASH_ATTR_UDF_GROUP_LIST);
+        status = sai_test_hash_create (&hash_id, &native_list, &udf_group_list, attr_count,
+                                       SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST,
+                                       SAI_HASH_ATTR_UDF_GROUP_LIST);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the Hash object fields */
-    sai_test_hash_verify (hash_id, &native_list, &udf_group_list);
+        /* Verify the Hash object fields */
+        sai_test_hash_verify (hash_id, &native_list, &udf_group_list);
 
-    /* Set the IPV4 LAG Hash object id value */
-    switch_attr.id        = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
-    switch_attr.value.oid = hash_id;
+        /* Set the IPV4 LAG Hash object id value */
+        switch_attr.id        = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
+        switch_attr.value.oid = hash_id;
 
-    status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
+        status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the UDF Fields */
-    udf_group_list.count = 0;
-    status = sai_test_hash_attr_set (hash_id, NULL, &udf_group_list,
-                                     SAI_HASH_ATTR_UDF_GROUP_LIST);
+        /* Remove the UDF Fields */
+        udf_group_list.count = 0;
+        status = sai_test_hash_attr_set (hash_id, NULL, &udf_group_list,
+                                         SAI_HASH_ATTR_UDF_GROUP_LIST);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the Native fields */
-    native_list.count = 0;
-    status = sai_test_hash_attr_set (hash_id, &native_list, NULL,
-                                     SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST);
+        /* Remove the Native fields */
+        native_list.count = 0;
+        status = sai_test_hash_attr_set (hash_id, &native_list, NULL,
+                                         SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify the Hash object fields */
-    sai_test_hash_verify (hash_id, &native_list, &udf_group_list);
+        /* Verify the Hash object fields */
+        sai_test_hash_verify (hash_id, &native_list, &udf_group_list);
 
-    /* Reset the IPV4 LAG Hash object */
-    switch_attr.id        = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
-    switch_attr.value.oid = SAI_NULL_OBJECT_ID;
+        /* Reset the IPV4 LAG Hash object */
+        switch_attr.id        = SAI_SWITCH_ATTR_LAG_HASH_IPV4;
+        switch_attr.value.oid = SAI_NULL_OBJECT_ID;
 
-    status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
+        status = switch_api_tbl_get()->set_switch_attribute (switch_id,&switch_attr);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the Hash object */
-    status = sai_test_hash_remove (hash_id);
+        /* Remove the Hash object */
+        status = sai_test_hash_remove (hash_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the UDF Hash UDF Group */
-    status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
+        /* Remove the UDF Hash UDF Group */
+        status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 /*
@@ -850,55 +857,55 @@ TEST_F (saiHashTest, hash_object_invalid_udf_group_list)
     sai_object_list_t  udf_group_list = {udf_count, &udf_group_id};
     unsigned int       udf_length = 2;
 
-    /* Create UDF Group of type Generic */
-    status = saiUdfTest::sai_test_udf_group_create (
-                                        &udf_group_id, dflt_udf_grp_attr_count,
-                                        SAI_UDF_GROUP_ATTR_TYPE,
-                                        SAI_UDF_GROUP_TYPE_GENERIC,
-                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
+    if(udf_hash_supported) {
+        /* Create UDF Group of type Generic */
+        status = saiUdfTest::sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
+                                                        SAI_UDF_GROUP_ATTR_TYPE,
+                                                        SAI_UDF_GROUP_TYPE_GENERIC,
+                                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
-                                   SAI_HASH_ATTR_UDF_GROUP_LIST);
+        status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
+                                       SAI_HASH_ATTR_UDF_GROUP_LIST);
 
-    /* Verify Hash creation fails */
-    EXPECT_NE (SAI_STATUS_SUCCESS, status);
+        /* Verify Hash creation fails */
+        EXPECT_NE (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the UDF Group object */
-    status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
+        /* Remove the UDF Group object */
+        status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    udf_group_id = SAI_NULL_OBJECT_ID;
+        udf_group_id = SAI_NULL_OBJECT_ID;
 
-    /* Create with NULL object id */
-    status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
-                                   SAI_HASH_ATTR_UDF_GROUP_LIST);
+        /* Create with NULL object id */
+        status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
+                                       SAI_HASH_ATTR_UDF_GROUP_LIST);
 
-    /* Verify Hash creation fails */
-    EXPECT_NE (SAI_STATUS_SUCCESS, status);
+        /* Verify Hash creation fails */
+        EXPECT_NE (SAI_STATUS_SUCCESS, status);
 
-    /* Create UDF Group of type Hash */
-    status = saiUdfTest::sai_test_udf_group_create (
-                                        &udf_group_id, dflt_udf_grp_attr_count,
-                                        SAI_UDF_GROUP_ATTR_TYPE,
-                                        SAI_UDF_GROUP_TYPE_GENERIC,
-                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
+        /* Create UDF Group of type Hash */
+        status = saiUdfTest::sai_test_udf_group_create (&udf_group_id, dflt_udf_grp_attr_count,
+                                                        SAI_UDF_GROUP_ATTR_TYPE,
+                                                        SAI_UDF_GROUP_TYPE_GENERIC,
+                                                        SAI_UDF_GROUP_ATTR_LENGTH, udf_length);
 
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Remove the UDF Group object */
-    status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
+        /* Remove the UDF Group object */
+        status = saiUdfTest::sai_test_udf_group_remove (udf_group_id);
 
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
-    /* Verify Hash creation fails for the non-existing group id */
-    status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
-                                   SAI_HASH_ATTR_UDF_GROUP_LIST);
+        /* Verify Hash creation fails for the non-existing group id */
+        status = sai_test_hash_create (&hash_id, NULL, &udf_group_list, attr_count,
+                                       SAI_HASH_ATTR_UDF_GROUP_LIST);
 
-    /* Verify Hash creation fails */
-    EXPECT_NE (SAI_STATUS_SUCCESS, status);
+        /* Verify Hash creation fails */
+        EXPECT_NE (SAI_STATUS_SUCCESS, status);
+    }
 }
 
 /*

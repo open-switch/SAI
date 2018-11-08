@@ -802,7 +802,7 @@ static void sai_test_rif_attr_value_fill (sai_attribute_t *p_attr,
             break;
 
         case SAI_ROUTER_INTERFACE_ATTR_VLAN_ID:
-            p_attr->value.u16 = attr_val;
+            p_attr->value.oid = attr_val;
 
             printf ("Value: %d\r\n", p_attr->value.u16);
             break;
@@ -1738,7 +1738,20 @@ sai_status_t saiL3Test::sai_test_neighbor_create (
     unsigned int         index;
     const char          *p_mac_str;
     unsigned int         attr_val;
+    sai_attribute_t      get_attr = {};
+    sai_object_id_t      vr_id = SAI_NULL_OBJECT_ID;
 
+    sai_rc = sai_test_rif_attr_get (rif_id, &get_attr, 1,
+                                    SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID);
+
+    if (sai_rc != SAI_STATUS_SUCCESS) {
+
+        printf ("SAI RIF attribute get failed with error: %d.\n", sai_rc);
+    }
+
+    vr_id = get_attr.value.oid;
+
+    neighbor_entry.vr_id                  = vr_id;
     neighbor_entry.rif_id                 = rif_id;
     neighbor_entry.ip_address.addr_family = addr_family;
 
@@ -1751,8 +1764,8 @@ sai_status_t saiL3Test::sai_test_neighbor_create (
         inet_pton (AF_INET6, ip_str, (void *) &neighbor_entry.ip_address.addr.ip6);
     }
 
-    printf ("SAI Neighbor entry, RIF Id: 0x%" PRIx64 ", IP addr: %s.\n",
-            rif_id, ip_str);
+    printf ("SAI Neighbor entry, VR Id: 0x%" PRIx64 ", RIF Id: 0x%" PRIx64 ", "
+            "IP addr: %s.\n", vr_id, rif_id, ip_str);
 
     p_attr_list = (sai_attribute_t *) calloc (attr_count,
                                               sizeof (sai_attribute_t));
@@ -1816,6 +1829,18 @@ sai_status_t saiL3Test::sai_test_neighbor_remove (
 {
     sai_status_t         sai_rc;
     sai_neighbor_entry_t neighbor_entry;
+    sai_attribute_t      get_attr = {};
+    sai_object_id_t      vr_id = SAI_NULL_OBJECT_ID;
+
+    sai_rc = sai_test_rif_attr_get (rif_id, &get_attr, 1,
+                                    SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID);
+
+    if (sai_rc != SAI_STATUS_SUCCESS) {
+
+        printf ("SAI RIF attribute get failed with error: %d.\n", sai_rc);
+    }
+
+    vr_id = get_attr.value.oid;
 
     neighbor_entry.ip_address.addr_family = addr_family;
 
@@ -1827,6 +1852,7 @@ sai_status_t saiL3Test::sai_test_neighbor_remove (
         inet_pton (AF_INET6, ip_str, (void *) &neighbor_entry.ip_address.addr.ip6);
     }
 
+    neighbor_entry.vr_id  = vr_id;
     neighbor_entry.rif_id = rif_id;
 
     sai_rc = saiL3Test::p_sai_nbr_api_tbl->remove_neighbor_entry (
@@ -1855,7 +1881,20 @@ sai_status_t saiL3Test::sai_test_neighbor_attr_set (
     sai_status_t         sai_rc;
     sai_attribute_t      attr;
     sai_neighbor_entry_t neighbor_entry;
+    sai_attribute_t      get_attr = {};
+    sai_object_id_t      vr_id = SAI_NULL_OBJECT_ID;
 
+    sai_rc = sai_test_rif_attr_get (rif_id, &get_attr, 1,
+                                    SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID);
+
+    if (sai_rc != SAI_STATUS_SUCCESS) {
+
+        printf ("SAI RIF attribute get failed with error: %d.\n", sai_rc);
+    }
+
+    vr_id = get_attr.value.oid;
+
+    neighbor_entry.vr_id                  = vr_id;
     neighbor_entry.rif_id                 = rif_id;
     neighbor_entry.ip_address.addr_family = addr_family;
 
@@ -1959,7 +1998,20 @@ sai_status_t saiL3Test::sai_test_neighbor_attr_get (
     sai_neighbor_entry_t neighbor_entry;
     va_list              varg_list;
     unsigned int         index;
+    sai_attribute_t      get_attr = {};
+    sai_object_id_t      vr_id = SAI_NULL_OBJECT_ID;
 
+    sai_rc = sai_test_rif_attr_get (rif_id, &get_attr, 1,
+                                    SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID);
+
+    if (sai_rc != SAI_STATUS_SUCCESS) {
+
+        printf ("SAI RIF attribute get failed with error: %d.\n", sai_rc);
+    }
+
+    vr_id = get_attr.value.oid;
+
+    neighbor_entry.vr_id                  = vr_id;
     neighbor_entry.rif_id                 = rif_id;
     neighbor_entry.ip_address.addr_family = addr_family;
 
@@ -2896,4 +2948,128 @@ sai_object_id_t saiL3Test ::sai_l3_default_vlan_obj_id_get (void)
 void saiL3Test ::sai_l3_default_vlan_obj_id_set(sai_object_id_t vlan_obj_id)
 {
     default_vlan_id = vlan_obj_id;
+}
+
+sai_status_t saiL3Test::sai_test_neighbor_create_in_vr (
+                                             sai_object_id_t vr_id,
+                                             sai_object_id_t rif_id,
+                                             sai_ip_addr_family_t addr_family,
+                                             const char *ip_str,
+                                             unsigned int attr_count, ...)
+{
+    sai_status_t         sai_rc;
+    sai_attribute_t     *p_attr_list = NULL;
+    sai_attribute_t     *p_attr = NULL;
+    va_list              varg_list;
+    sai_neighbor_entry_t neighbor_entry;
+    unsigned int         index;
+    const char          *p_mac_str;
+    unsigned int         attr_val;
+
+    neighbor_entry.vr_id                  = vr_id;
+    neighbor_entry.rif_id                 = rif_id;
+    neighbor_entry.ip_address.addr_family = addr_family;
+
+    if (addr_family == SAI_IP_ADDR_FAMILY_IPV4) {
+
+        inet_pton (AF_INET, ip_str, (void *) &neighbor_entry.ip_address.addr.ip4);
+
+    } else {
+
+        inet_pton (AF_INET6, ip_str, (void *) &neighbor_entry.ip_address.addr.ip6);
+    }
+
+    printf ("SAI Neighbor entry, VR Id: 0x%" PRIx64 ", RIF Id: 0x%" PRIx64 ", "
+            "IP addr: %s.\n", vr_id, rif_id, ip_str);
+
+    p_attr_list = (sai_attribute_t *) calloc (attr_count,
+                                              sizeof (sai_attribute_t));
+    if (p_attr_list == NULL) {
+
+        printf ("%s(): Memory alloc failed for attribute list.\n", __FUNCTION__);
+
+        return SAI_STATUS_NO_MEMORY;
+    }
+
+    va_start (varg_list, attr_count);
+
+    for (index = 0; index < attr_count; index++) {
+
+        p_mac_str = NULL;
+        attr_val  = 0;
+
+        p_attr = &p_attr_list [index];
+
+        p_attr->id = va_arg (varg_list, unsigned int);
+
+        if (p_attr->id == SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS) {
+
+            p_mac_str = va_arg (varg_list, const char *);
+
+        } else {
+
+            attr_val = va_arg (varg_list, unsigned int);
+        }
+
+        printf ("Attr Index: %d, ", index);
+
+        sai_test_neighbor_attr_value_pair_fill (p_attr, p_attr->id, attr_val,
+                                                p_mac_str);
+    }
+
+    va_end (varg_list);
+
+    sai_rc = p_sai_nbr_api_tbl->create_neighbor_entry (
+                                (const sai_neighbor_entry_t *) &neighbor_entry,
+                                attr_count, p_attr_list);
+
+    if (sai_rc != SAI_STATUS_SUCCESS) {
+
+        printf ("SAI Neighbor Creation failed with error: %d.\n", sai_rc);
+
+    } else {
+
+        printf ("SAI Neighbor Creation success.\n");
+    }
+
+    free (p_attr_list);
+
+    return sai_rc;
+}
+
+sai_status_t saiL3Test::sai_test_neighbor_remove_from_vr (
+                                             sai_object_id_t vr_id,
+                                             sai_object_id_t rif_id,
+                                             sai_ip_addr_family_t addr_family,
+                                             const char *ip_str)
+{
+    sai_status_t         sai_rc;
+    sai_neighbor_entry_t neighbor_entry;
+
+    neighbor_entry.ip_address.addr_family = addr_family;
+
+    if (addr_family == SAI_IP_ADDR_FAMILY_IPV4) {
+
+        inet_pton (AF_INET, ip_str, (void *) &neighbor_entry.ip_address.addr.ip4);
+
+    } else {
+        inet_pton (AF_INET6, ip_str, (void *) &neighbor_entry.ip_address.addr.ip6);
+    }
+
+    neighbor_entry.vr_id  = vr_id;
+    neighbor_entry.rif_id = rif_id;
+
+    sai_rc = saiL3Test::p_sai_nbr_api_tbl->remove_neighbor_entry (
+                               (const sai_neighbor_entry_t *) &neighbor_entry);
+
+    if (sai_rc != SAI_STATUS_SUCCESS) {
+
+        printf ("SAI Neighbor remove failed with error: %d.\n", sai_rc);
+
+    } else {
+
+        printf ("SAI Neighbor remove success.\n");
+    }
+
+    return sai_rc;
 }

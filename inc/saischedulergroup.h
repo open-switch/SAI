@@ -15,20 +15,20 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell EMC, Facebook Inc., Marvell International Ltd.
+ *    Dell EMC, Facebook, Inc., Marvell International Ltd.
  *
  * @file    saischedulergroup.h
  *
  * @brief   This module defines SAI QOS Scheduler Group interface
  */
 
-#if !defined (__SAISCHEDULER_GROUP_H_)
-#define __SAISCHEDULER_GROUP_H_
+#if !defined (__SAISCHEDULERGROUP_H_)
+#define __SAISCHEDULERGROUP_H_
 
 #include <saitypes.h>
 
 /**
- * @defgroup SAISCHEDULERGROUP SAI - Qos scheduler group specific API definitions
+ * @defgroup SAISCHEDULERGROUP SAI - QOS scheduler group specific API definitions
  *
  * @{
  */

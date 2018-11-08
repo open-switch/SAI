@@ -15,11 +15,11 @@
  *
  *    Microsoft would like to thank the following companies for their review and
  *    assistance with these files: Intel Corporation, Mellanox Technologies Ltd,
- *    Dell EMC, Facebook Inc., Marvell International Ltd.
+ *    Dell EMC, Facebook, Inc., Marvell International Ltd.
  *
  * @file    saiwred.h
  *
- * @brief   This module defines SAI QOS Wred interface
+ * @brief   This module defines SAI QOS WRED interface
  */
 
 #if !defined (__SAIWRED_H_)

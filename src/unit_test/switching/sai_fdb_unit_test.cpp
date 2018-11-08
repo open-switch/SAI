@@ -59,6 +59,7 @@ sai_status_t fdbInit::sai_get_fdb_bridge_port_list_get(sai_switch_api_t *p_sai_s
 
 sai_fdb_api_t* fdbInit ::sai_fdb_api_table = NULL;
 sai_lag_api_t* fdbInit ::sai_lag_api_table = NULL;
+sai_vlan_api_t* fdbInit ::sai_vlan_api_table = NULL;
 sai_bridge_api_t *fdbInit::p_sai_bridge_api_tbl = NULL;
 
 sai_object_id_t fdbInit ::bridge_port_id_1 = 0;
@@ -105,7 +106,7 @@ TEST_F(fdbInit, create_fdb_entry)
     attr_list[0].id = SAI_FDB_ENTRY_ATTR_TYPE;
     attr_list[0].value.s32 = SAI_FDB_ENTRY_TYPE_DYNAMIC;
 
-    ASSERT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING,
+    EXPECT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING,
               sai_fdb_api_table->create_fdb_entry(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  1,
@@ -113,7 +114,7 @@ TEST_F(fdbInit, create_fdb_entry)
     attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     attr_list[1].value.oid = bridge_port_id_1;
 
-    ASSERT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING,
+    EXPECT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING,
               sai_fdb_api_table->create_fdb_entry(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  2,
@@ -121,7 +122,7 @@ TEST_F(fdbInit, create_fdb_entry)
 
     attr_list[0].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
     attr_list[0].value.s32 = SAI_PACKET_ACTION_FORWARD;
-    ASSERT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING,
+    EXPECT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING,
               sai_fdb_api_table->create_fdb_entry(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  2,
@@ -129,7 +130,7 @@ TEST_F(fdbInit, create_fdb_entry)
 
     attr_list[1].id = SAI_FDB_ENTRY_ATTR_TYPE;
     attr_list[1].value.s32 = SAI_FDB_ENTRY_TYPE_DYNAMIC;
-    ASSERT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING,
+    EXPECT_EQ(SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING,
               sai_fdb_api_table->create_fdb_entry(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                   2,
@@ -172,7 +173,7 @@ TEST_F(fdbInit, remove_fdb_entry)
     get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  SAI_MAX_FDB_TEST_ATTRIBUTES,
@@ -207,7 +208,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_bridge_port)
     get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  SAI_MAX_FDB_TEST_ATTRIBUTES,
@@ -293,7 +294,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_lag)
     get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  SAI_MAX_FDB_TEST_ATTRIBUTES,
@@ -330,7 +331,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_vlan)
     memset(flush_attr,0, sizeof(flush_attr));
 
     flush_attr[0].id = SAI_FDB_FLUSH_ATTR_BV_ID;
-    flush_attr[0].value.oid =  SAI_GTEST_VLAN_OBJ;
+    flush_attr[0].value.oid =  vlan_obj_id;
 
     flush_attr[1].id = SAI_FDB_FLUSH_ATTR_ENTRY_TYPE;
     flush_attr[1].value.s32 = SAI_FDB_FLUSH_ENTRY_TYPE_DYNAMIC;
@@ -343,7 +344,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_vlan)
     get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  SAI_MAX_FDB_TEST_ATTRIBUTES,
@@ -419,7 +420,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_bridge)
     get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  3,
@@ -503,7 +504,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_bridge_bridge_port)
     get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  3,
@@ -527,7 +528,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_port_vlan)
     memset(flush_attr,0, sizeof(flush_attr));
 
     flush_attr[0].id = SAI_FDB_FLUSH_ATTR_BV_ID;
-    flush_attr[0].value.oid =  SAI_GTEST_VLAN_OBJ;
+    flush_attr[0].value.oid =  vlan_obj_id;
 
     flush_attr[1].id = SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID;
     flush_attr[1].value.oid =  bridge_port_id_1;
@@ -544,7 +545,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_port_vlan)
     get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  SAI_MAX_FDB_TEST_ATTRIBUTES,
@@ -621,7 +622,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_lag_vlan)
     memset(flush_attr,0, sizeof(flush_attr));
 
     flush_attr[0].id = SAI_FDB_FLUSH_ATTR_BV_ID;
-    flush_attr[0].value.oid =  SAI_GTEST_VLAN_OBJ;
+    flush_attr[0].value.oid =  vlan_obj_id;
 
     flush_attr[1].id = SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID;
     flush_attr[1].value.oid =  bridge_port_id;
@@ -638,7 +639,7 @@ TEST_F(fdbInit, flush_all_fdb_entries_by_lag_vlan)
     get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry,
                                  SAI_MAX_FDB_TEST_ATTRIBUTES,
@@ -746,13 +747,13 @@ TEST_F(fdbInit, flush_all_fdb_entries)
     get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
     get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry_1,
                                  SAI_MAX_FDB_TEST_ATTRIBUTES,
                                  get_attr_list));
 
-    ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+    EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
               sai_fdb_api_table->get_fdb_entry_attribute(
                                  (const sai_fdb_entry_t*)&fdb_entry_2,
                                  SAI_MAX_FDB_TEST_ATTRIBUTES,
@@ -801,7 +802,7 @@ TEST_F(fdbInit, flush_supported_types)
         get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
         get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-        ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+        EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
                 sai_fdb_api_table->get_fdb_entry_attribute(
                     (const sai_fdb_entry_t*)&fdb_entry,
                     SAI_MAX_FDB_TEST_ATTRIBUTES,
@@ -830,7 +831,7 @@ TEST_F(fdbInit, flush_supported_types)
         get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
         get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-        ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+        EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
                 sai_fdb_api_table->get_fdb_entry_attribute(
                     (const sai_fdb_entry_t*)&fdb_entry,
                     SAI_MAX_FDB_TEST_ATTRIBUTES,
@@ -847,9 +848,11 @@ TEST_F(fdbInit, flush_supported_types)
                     (const sai_fdb_entry_t*)&fdb_entry));
     }
 
+    memset(flush_attr,0, sizeof(flush_attr));
     sai_fdb_entry_create(SAI_FDB_ENTRY_TYPE_STATIC, bridge_port_id_1, SAI_PACKET_ACTION_FORWARD);
 
-    ret = sai_fdb_api_table->flush_fdb_entries(switch_id, 0, NULL);
+    ret = sai_fdb_api_table->flush_fdb_entries(switch_id, 0,
+                                 (const sai_attribute_t*)flush_attr);
 
     if (ret == SAI_STATUS_SUCCESS) {
         printf("Flush by all types is supported\r\n");
@@ -857,7 +860,7 @@ TEST_F(fdbInit, flush_supported_types)
         get_attr_list[1].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
         get_attr_list[2].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
 
-        ASSERT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
+        EXPECT_EQ(SAI_STATUS_ADDR_NOT_FOUND,
                 sai_fdb_api_table->get_fdb_entry_attribute(
                     (const sai_fdb_entry_t*)&fdb_entry,
                     SAI_MAX_FDB_TEST_ATTRIBUTES,
