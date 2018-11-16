@@ -321,7 +321,19 @@ typedef enum _sai_queue_stat_t
     SAI_QUEUE_STAT_WRED_ECN_MARKED_BYTES = 0x00000023,
 
     /** Custom range base value */
-    SAI_QUEUE_STAT_CUSTOM_RANGE_BASE = 0x10000000
+    SAI_QUEUE_STAT_CUSTOM_RANGE_BASE = 0x10000000,
+
+    /** Get current queue occupancy from BST snapshot in bytes [uint64_t] */
+    SAI_QUEUE_STAT_EXTENSIONS_SNAPSHOT_CURR_OCCUPANCY_BYTES = SAI_QUEUE_STAT_CUSTOM_RANGE_BASE,
+
+    /** Get watermark queue occupancy from BST snapshot in bytes [uint64_t] */
+    SAI_QUEUE_STAT_EXTENSIONS_SNAPSHOT_WATERMARK_BYTES,
+
+    /** Get current queue shared occupancy from BST snapshot in bytes [uint64_t] */
+    SAI_QUEUE_STAT_EXTENSIONS_SNAPSHOT_SHARED_CURR_OCCUPANCY_BYTES,
+
+    /** Get watermark queue shared occupancy from BST snapshot in bytes [uint64_t] */
+    SAI_QUEUE_STAT_EXTENSIONS_SNAPSHOT_SHARED_WATERMARK_BYTES
 
 } sai_queue_stat_t;
 
@@ -431,6 +443,24 @@ typedef sai_status_t (*sai_get_queue_stats_fn)(
         _Out_ uint64_t *counters);
 
 /**
+ * @brief Get queue statistics counters extended.
+ *
+ * @param[in] queue_id Queue id
+ * @param[in] number_of_counters Number of counters in the array
+ * @param[in] counter_ids Specifies the array of counter ids
+ * @param[in] mode Statistics mode
+ * @param[out] counters Array of resulting counter values.
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_get_queue_stats_ext_fn)(
+        _In_ sai_object_id_t queue_id,
+        _In_ uint32_t number_of_counters,
+        _In_ const sai_queue_stat_t *counter_ids,
+        _In_ sai_stats_mode_t mode,
+        _Out_ uint64_t *counters);
+
+/**
  * @brief Clear queue statistics counters.
  *
  * @param[in] queue_id Queue id
@@ -468,6 +498,7 @@ typedef struct _sai_queue_api_t
     sai_set_queue_attribute_fn   set_queue_attribute;
     sai_get_queue_attribute_fn   get_queue_attribute;
     sai_get_queue_stats_fn       get_queue_stats;
+    sai_get_queue_stats_ext_fn   get_queue_stats_ext;
     sai_clear_queue_stats_fn     clear_queue_stats;
 
 } sai_queue_api_t;

@@ -29,6 +29,19 @@
 #include <saiswitch.h>
 
 /**
+ * @brief Attribute data for #SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_MODE
+ */
+typedef enum _sai_switch_bst_tracking_mode
+{
+    /** Peak value tracking mode */
+    SAI_SWITCH_BST_TRACKING_MODE_PEAK,
+
+    /** Current value tracking mode */
+    SAI_SWITCH_BST_TRACKING_MODE_CURRENT,
+
+} sai_switch_bst_tracking_mode_t;
+
+/**
  * @brief SAI switch attribute extensions.
  *
  * @flags
@@ -46,6 +59,24 @@ typedef enum _sai_switch_attr_extensions_t
      * @default internal
      */
     SAI_SWITCH_ATTR_EXTENSIONS_ACL_SLICE_LIST,
+
+    /**
+     * @brief Buffer Statistics Tracking mode type.
+     *
+     * @type sai_switch_bst_tracking_mode_t
+     * @flags CREATE_AND_SET
+     * @default SAI_SWITCH_BST_TRACKING_MODE_CURRENT
+     */
+    SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_MODE,
+
+    /**
+     * @brief Buffer Statistics Tracking admin enable/disable.
+     *
+     * @type bool
+     * @flags CREATE_AND_SET
+     * @default false
+     */
+    SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_ENABLE,
 
     SAI_SWITCH_ATTR_EXTENSIONS_RANGE_END
 

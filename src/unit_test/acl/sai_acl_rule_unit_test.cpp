@@ -5107,3 +5107,112 @@ int main (int argc, char **argv)
     return RUN_ALL_TESTS();
 }
 
+TEST_F(saiACLRuleTest, rule_with_dst_mac_system_acl)
+{
+    sai_status_t    sai_rc = SAI_STATUS_SUCCESS;
+    sai_object_id_t pvst_rule_id = 0;
+    sai_object_id_t fefd_rule_id = 0;
+    sai_object_id_t xxx_rule_id = 0;
+    sai_object_id_t acl_table_id = 0;
+    sai_mac_t l2_dst_mac_data = {0x01,0x00,0x0c,0xcc,0xcc,0xcd};
+    sai_mac_t l2_dst_mac_mask = {0xff,0xff,0xff,0xff,0xff,0xff};
+    sai_attribute_t acl_entry_attr = {0};
+
+    /* Table Create */
+    sai_rc = sai_test_acl_table_create (&acl_table_id, 15,
+                                        SAI_ACL_TABLE_ATTR_ACL_STAGE,
+                                        SAI_ACL_STAGE_INGRESS,
+                                        SAI_ACL_TABLE_ATTR_PRIORITY, 14,
+                                        SAI_ACL_TABLE_ATTR_FIELD_IN_PORTS,
+                                        SAI_ACL_TABLE_ATTR_FIELD_DST_MAC,
+                                        SAI_ACL_TABLE_ATTR_FIELD_ETHER_TYPE,
+                                        SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID,
+                                        SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE,
+                                        SAI_ACL_TABLE_ATTR_FIELD_IP_PROTOCOL,
+                                        SAI_ACL_TABLE_ATTR_FIELD_TTL,
+                                        SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_FRAG,
+                                        SAI_ACL_TABLE_ATTR_FIELD_ICMP_TYPE,
+                                        SAI_ACL_TABLE_ATTR_FIELD_ICMP_CODE,
+                                        SAI_ACL_TABLE_ATTR_FIELD_IPV6_NEXT_HEADER,
+                                        SAI_ACL_TABLE_ATTR_FIELD_DROP_MARKED,
+                                        SAI_ACL_TABLE_ATTR_FIELD_BRIDGE_TYPE);
+
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Create PVST dstmac rule*/
+    sai_rc = sai_test_acl_rule_create (&pvst_rule_id, 4,
+                                       SAI_ACL_ENTRY_ATTR_TABLE_ID, acl_table_id,
+                                       SAI_ACL_ENTRY_ATTR_PRIORITY, 8,
+                                       SAI_ACL_ENTRY_ATTR_ADMIN_STATE, true,
+                                       SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC,
+                                       1,  &l2_dst_mac_data, &l2_dst_mac_mask);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Verify the dst mac attribute value*/
+    sai_rc = sai_test_acl_rule_get (pvst_rule_id, &acl_entry_attr,
+                                    1, SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Create FEFD dstmac rule*/
+    l2_dst_mac_data[5]= 0xcc;
+    sai_rc = sai_test_acl_rule_create (&fefd_rule_id, 4,
+                                       SAI_ACL_ENTRY_ATTR_TABLE_ID, acl_table_id,
+                                       SAI_ACL_ENTRY_ATTR_PRIORITY, 8,
+                                       SAI_ACL_ENTRY_ATTR_ADMIN_STATE, true,
+                                       SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC,
+                                       1,  &l2_dst_mac_data, &l2_dst_mac_mask);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Verify the dst mac attribute value*/
+    sai_rc = sai_test_acl_rule_get (fefd_rule_id, &acl_entry_attr,
+                                    1, SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Create xxx dstmac rule*/
+    l2_dst_mac_data[5] = 0xce;
+    sai_rc = sai_test_acl_rule_create (&xxx_rule_id, 4,
+                                       SAI_ACL_ENTRY_ATTR_TABLE_ID, acl_table_id,
+                                       SAI_ACL_ENTRY_ATTR_PRIORITY, 8,
+                                       SAI_ACL_ENTRY_ATTR_ADMIN_STATE, true,
+                                       SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC,
+                                       1,  &l2_dst_mac_data, &l2_dst_mac_mask);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Verify the dst mac attribute value*/
+    sai_rc = sai_test_acl_rule_get (xxx_rule_id, &acl_entry_attr,
+                                    1, SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Delete FEFD rule*/
+    sai_rc = sai_test_acl_rule_remove(fefd_rule_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Delete xxx rule*/
+    sai_rc = sai_test_acl_rule_remove(xxx_rule_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Create FEFD dstmac rule again*/
+    l2_dst_mac_data[5] = 0xcc;
+    sai_rc = sai_test_acl_rule_create (&fefd_rule_id, 4,
+                                       SAI_ACL_ENTRY_ATTR_TABLE_ID, acl_table_id,
+                                       SAI_ACL_ENTRY_ATTR_PRIORITY, 8,
+                                       SAI_ACL_ENTRY_ATTR_ADMIN_STATE, true,
+                                       SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC,
+                                       1,  &l2_dst_mac_data, &l2_dst_mac_mask);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Verify the dst mac attribute value*/
+    sai_rc = sai_test_acl_rule_get (fefd_rule_id, &acl_entry_attr,
+                                    1, SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_rc = sai_test_acl_rule_remove(pvst_rule_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_rc = sai_test_acl_rule_remove(fefd_rule_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Delete table*/
+    sai_rc = sai_test_acl_table_remove (acl_table_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+}
