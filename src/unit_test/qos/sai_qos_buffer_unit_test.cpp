@@ -27,6 +27,7 @@ extern "C" {
 #include "saibuffer.h"
 #include "saiport.h"
 #include "saiqueue.h"
+#include "saiswitchextensions.h"
 #include <inttypes.h>
 }
 
@@ -3102,3 +3103,230 @@ TEST_F(qos_buffer, qos_ing_egr_admn_ctrl_pfc_test)
               sai_buffer_api_table->remove_buffer_pool (egr_pfc_pool_id));
 
 }
+
+TEST_F (qos_buffer, bst_enable)
+{
+    sai_attribute_t get_attr;
+    sai_attribute_t set_attr;
+    memset(&get_attr, 0, sizeof(get_attr));
+    memset(&set_attr, 0, sizeof(get_attr));
+    get_attr.id = SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_ENABLE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->get_switch_attribute(switch_id,1, &get_attr));
+    EXPECT_EQ (get_attr.value.booldata, false);
+
+    set_attr.id = SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_ENABLE;
+    set_attr.value.booldata = true;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->set_switch_attribute(switch_id,
+                                            (const sai_attribute_t *)&set_attr));
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->get_switch_attribute(switch_id,1, &get_attr));
+    EXPECT_EQ (get_attr.value.booldata, true);
+    printf("BST is %s\r\n",get_attr.value.booldata ? "enabled" : "disabled");
+}
+
+TEST_F (qos_buffer, bst_mode_set)
+{
+    sai_attribute_t get_attr;
+    sai_attribute_t set_attr;
+    memset(&get_attr, 0, sizeof(get_attr));
+    memset(&set_attr, 0, sizeof(get_attr));
+    set_attr.id = SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_MODE;
+    set_attr.value.s32= SAI_SWITCH_BST_TRACKING_MODE_CURRENT;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->set_switch_attribute(switch_id,
+                                            (const sai_attribute_t *)&set_attr));
+    get_attr.id = SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_MODE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->get_switch_attribute(switch_id,1, &get_attr));
+    EXPECT_EQ (get_attr.value.s32, SAI_SWITCH_BST_TRACKING_MODE_CURRENT);
+
+    set_attr.id = SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_MODE;
+    set_attr.value.s32= SAI_SWITCH_BST_TRACKING_MODE_PEAK;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->set_switch_attribute(switch_id,
+                                            (const sai_attribute_t *)&set_attr));
+    get_attr.id = SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_MODE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->get_switch_attribute(switch_id,1, &get_attr));
+    EXPECT_EQ (get_attr.value.s32, SAI_SWITCH_BST_TRACKING_MODE_PEAK);
+    printf("BST mode is %d\r\n", get_attr.value.s32);
+}
+
+TEST_F (qos_buffer, pg_bst_stats_get)
+{
+    sai_status_t    sai_rc = SAI_STATUS_SUCCESS;
+    sai_object_id_t pg_id;
+    sai_object_id_t port_id = sai_qos_port_id_get (0);
+    sai_ingress_priority_group_stat_t counter_id[] =
+                   {SAI_INGRESS_PRIORITY_GROUP_STAT_SHARED_WATERMARK_BYTES,
+                    SAI_INGRESS_PRIORITY_GROUP_STAT_XOFF_ROOM_WATERMARK_BYTES,
+                    SAI_INGRESS_PRIORITY_GROUP_STAT_EXTENSIONS_SNAPSHOT_SHARED_WATERMARK_BYTES,
+                    SAI_INGRESS_PRIORITY_GROUP_STAT_EXTENSIONS_SNAPSHOT_XOFF_ROOM_WATERMARK_BYTES
+                    };
+    uint64_t counter_val;
+    unsigned int idx = 0;
+    unsigned int num_counters;
+
+    num_counters =  sizeof(counter_id)/sizeof(sai_ingress_priority_group_stat_t);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_qos_buffer_get_first_pg(sai_port_api_table, port_id, &pg_id));
+    printf("Fetching BST stats for PG Id: 0x%" PRIx64 "\r\n",pg_id);
+    for(idx = 0; idx < num_counters; idx++) {
+        sai_rc = sai_buffer_api_table->get_ingress_priority_group_stats(pg_id, 1, &counter_id[idx],
+                                                                        &counter_val);
+        if(sai_rc == SAI_STATUS_SUCCESS) {
+             printf("Get counter ID %d is supported. Val:0x%" PRIx64 "\r\n",counter_id[idx],counter_val);
+        } else if( sai_rc == SAI_STATUS_NOT_SUPPORTED) {
+             printf("Get counter ID %d is not supported.\r\n",counter_id[idx]);
+        } else {
+             printf("Get counter ID %d get returned error %d\r\n",counter_id[idx], sai_rc);
+        }
+    }
+}
+
+TEST_F (qos_buffer, pg_bst_stats_clear)
+{
+    sai_status_t    sai_rc = SAI_STATUS_SUCCESS;
+    sai_object_id_t pg_id;
+    sai_object_id_t port_id = sai_qos_port_id_get (0);
+    sai_ingress_priority_group_stat_t counter_id[] =
+                   {SAI_INGRESS_PRIORITY_GROUP_STAT_SHARED_WATERMARK_BYTES,
+                    SAI_INGRESS_PRIORITY_GROUP_STAT_XOFF_ROOM_WATERMARK_BYTES,
+                    SAI_INGRESS_PRIORITY_GROUP_STAT_EXTENSIONS_SNAPSHOT_SHARED_WATERMARK_BYTES,
+                    SAI_INGRESS_PRIORITY_GROUP_STAT_EXTENSIONS_SNAPSHOT_XOFF_ROOM_WATERMARK_BYTES
+                    };
+    uint64_t counter_val;
+    unsigned int idx = 0;
+    unsigned int num_counters;
+
+    num_counters =  sizeof(counter_id)/sizeof(sai_ingress_priority_group_stat_t);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_qos_buffer_get_first_pg(sai_port_api_table, port_id, &pg_id));
+    for(idx = 0; idx < num_counters; idx++) {
+        sai_rc = sai_buffer_api_table->clear_ingress_priority_group_stats(pg_id, 1, &counter_id[idx]);
+        EXPECT_EQ (sai_rc, SAI_STATUS_SUCCESS);
+        sai_rc = sai_buffer_api_table->get_ingress_priority_group_stats(pg_id, 1, &counter_id[idx],
+                                                                        &counter_val);
+        if(sai_rc == SAI_STATUS_SUCCESS) {
+             printf("Get counter ID %d is supported. Val:0x%" PRIx64 "\r\n",counter_id[idx],counter_val);
+        } else if( sai_rc == SAI_STATUS_NOT_SUPPORTED) {
+             printf("Get counter ID %d is not supported.\r\n",counter_id[idx]);
+        } else {
+             printf("Get counter ID %d get returned error %d\r\n",counter_id[idx], sai_rc);
+        }
+    }
+}
+
+TEST_F (qos_buffer, buffer_pool_bst_stats_get)
+{
+    sai_status_t    sai_rc = SAI_STATUS_SUCCESS;
+    sai_buffer_pool_stat_t counter_id[] =
+                   {SAI_BUFFER_POOL_STAT_EXTENSIONS_SNAPSHOT_WATERMARK_BYTES,
+                    SAI_BUFFER_POOL_STAT_EXTENSIONS_SNAPSHOT_XOFF_ROOM_CURR_OCCUPANCY_BYTES,
+                    SAI_BUFFER_POOL_STAT_XOFF_ROOM_WATERMARK_BYTES,
+                    SAI_BUFFER_POOL_STAT_WATERMARK_BYTES
+                    };
+    sai_attribute_t set_attr;
+    sai_object_id_t pool_id = 0;
+    sai_object_id_t pg_id;
+    sai_object_id_t port_id = sai_qos_port_id_get (0);
+    sai_object_id_t profile_id = 0;
+    uint64_t counter_val;
+    unsigned int idx = 0;
+    unsigned int num_counters;
+
+    num_counters =  sizeof(counter_id)/sizeof(sai_buffer_pool_stat_t);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_create_buffer_pool(sai_buffer_api_table, &pool_id,
+                                  sai_buffer_pool_test_size_1, SAI_BUFFER_POOL_TYPE_INGRESS,
+                                  SAI_BUFFER_POOL_THRESHOLD_MODE_DYNAMIC));
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_create_buffer_profile(sai_buffer_api_table, &profile_id,
+                                  0x6f ,pool_id, sai_buffer_profile_test_size_2, 1, 1, 0,
+                                  sai_buffer_profile_test_size_1, sai_buffer_profile_test_size_1));
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_qos_buffer_get_first_pg(sai_port_api_table, port_id, &pg_id));
+    set_attr.id = SAI_INGRESS_PRIORITY_GROUP_ATTR_BUFFER_PROFILE;
+    set_attr.value.oid = profile_id;
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_buffer_api_table->set_ingress_priority_group_attribute
+                                               (pg_id, (const sai_attribute_t *)&set_attr));
+    printf("Fetching BST stats for buffer pool Id: 0x%" PRIx64 "\r\n", pool_id);
+    for(idx = 0; idx < num_counters; idx++) {
+        sai_rc = sai_buffer_api_table->get_buffer_pool_stats(pool_id, 1, &counter_id[idx],
+                                                             &counter_val);
+        if(sai_rc == SAI_STATUS_SUCCESS) {
+             printf("Get counter ID %d is supported. Val:0x%" PRIx64 "\r\n",counter_id[idx],counter_val);
+        } else if( sai_rc == SAI_STATUS_NOT_SUPPORTED) {
+             printf("Get counter ID %d is not supported.\r\n",counter_id[idx]);
+        } else {
+             printf("Get counter ID %d get returned error %d\r\n",counter_id[idx], sai_rc);
+        }
+    }
+    set_attr.id = SAI_INGRESS_PRIORITY_GROUP_ATTR_BUFFER_PROFILE;
+    set_attr.value.oid = SAI_NULL_OBJECT_ID;
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_buffer_api_table->set_ingress_priority_group_attribute
+                                               (pg_id, (const sai_attribute_t *)&set_attr));
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS,
+               sai_buffer_api_table->remove_buffer_profile (profile_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_buffer_api_table->remove_buffer_pool (pool_id));
+}
+
+TEST_F (qos_buffer, buffer_pool_bst_stats_clear)
+{
+    sai_status_t    sai_rc = SAI_STATUS_SUCCESS;
+    sai_buffer_pool_stat_t counter_id[] =
+                   {SAI_BUFFER_POOL_STAT_EXTENSIONS_SNAPSHOT_WATERMARK_BYTES,
+                    SAI_BUFFER_POOL_STAT_EXTENSIONS_SNAPSHOT_XOFF_ROOM_CURR_OCCUPANCY_BYTES,
+                    SAI_BUFFER_POOL_STAT_XOFF_ROOM_WATERMARK_BYTES,
+                    SAI_BUFFER_POOL_STAT_WATERMARK_BYTES
+                    };
+    sai_attribute_t set_attr;
+    sai_object_id_t pool_id = 0;
+    sai_object_id_t pg_id;
+    sai_object_id_t port_id = sai_qos_port_id_get (0);
+    sai_object_id_t profile_id = 0;
+    uint64_t counter_val;
+    unsigned int idx = 0;
+    unsigned int num_counters;
+
+    num_counters =  sizeof(counter_id)/sizeof(sai_buffer_pool_stat_t);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_create_buffer_pool(sai_buffer_api_table, &pool_id,
+                                  sai_buffer_pool_test_size_1, SAI_BUFFER_POOL_TYPE_INGRESS,
+                                  SAI_BUFFER_POOL_THRESHOLD_MODE_DYNAMIC));
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_create_buffer_profile(sai_buffer_api_table, &profile_id,
+                                  0x6f ,pool_id, sai_buffer_profile_test_size_2, 1, 1, 0,
+                                  sai_buffer_profile_test_size_1, sai_buffer_profile_test_size_1));
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_qos_buffer_get_first_pg(sai_port_api_table, port_id, &pg_id));
+    set_attr.id = SAI_INGRESS_PRIORITY_GROUP_ATTR_BUFFER_PROFILE;
+    set_attr.value.oid = profile_id;
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_buffer_api_table->set_ingress_priority_group_attribute
+                                               (pg_id, (const sai_attribute_t *)&set_attr));
+    for(idx = 0; idx < num_counters; idx++) {
+        sai_rc = sai_buffer_api_table->clear_buffer_pool_stats(pool_id, 1, &counter_id[idx]);
+        EXPECT_EQ (sai_rc, SAI_STATUS_SUCCESS);
+        sai_rc = sai_buffer_api_table->get_buffer_pool_stats(pool_id, 1, &counter_id[idx],
+                                                             &counter_val);
+        if(sai_rc == SAI_STATUS_SUCCESS) {
+             printf("Get counter ID %d is supported. Val:0x%" PRIx64 "\r\n",counter_id[idx],counter_val);
+        } else if( sai_rc == SAI_STATUS_NOT_SUPPORTED) {
+             printf("Get counter ID %d is not supported.\r\n",counter_id[idx]);
+        } else {
+             printf("Get counter ID %d get returned error %d\r\n",counter_id[idx], sai_rc);
+        }
+    }
+    set_attr.id = SAI_INGRESS_PRIORITY_GROUP_ATTR_BUFFER_PROFILE;
+    set_attr.value.oid = SAI_NULL_OBJECT_ID;
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_buffer_api_table->set_ingress_priority_group_attribute
+                                               (pg_id, (const sai_attribute_t *)&set_attr));
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS,
+               sai_buffer_api_table->remove_buffer_profile (profile_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_buffer_api_table->remove_buffer_pool (pool_id));
+}
+
