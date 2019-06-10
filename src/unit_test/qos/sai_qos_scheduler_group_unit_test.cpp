@@ -813,7 +813,7 @@ TEST (saiQosSchedulerGroupTest, modify_parent)
         sai_rc = sai_test_sched_group_child_count_get(sg_id_list[1][0], &child_count);
         printf("Child count of L1.0 is %u\r\n", child_count);
 
-        memset(child_list, 0, SAI_TEST_GROUPS_PER_LEVEL);
+        memset(child_list, 0, sizeof(child_list));
         if (child_count > 0)
         {
             printf("Child List of L1.0 \r\n");
@@ -844,7 +844,7 @@ TEST (saiQosSchedulerGroupTest, modify_parent)
         sai_rc = sai_test_sched_group_child_count_get(sg_id_list[1][0], &child_count);
         printf("Child count of L1.0 is %u\r\n", child_count);
 
-        memset(child_list, 0, SAI_TEST_GROUPS_PER_LEVEL);
+        memset(child_list, 0, sizeof(child_list));
         if (child_count > 0)
         {
             printf("Child List of L1.0 \r\n");
@@ -942,8 +942,9 @@ TEST (saiQosSchedulerGroupTest, sched_group_child_list_attribute_get)
 
         for (child = 0; child < (is_fixed_hqos == true ?
              SAI_MAX_GROUPS_PER_LEVEL : SAI_TEST_GROUPS_PER_LEVEL); child++) {
-            if (sg_id_list[next_level][child])
+            if (sg_id_list[next_level][child]) {
                 EXPECT_EQ (sg_id_list[next_level][child], child_list[child]);
+            }
         }
     }
 

@@ -20,19 +20,78 @@
 
 #include "sai_l3_unit_test_utils.h"
 
+#include "sainexthopgroupextensions.h"
+
 extern "C" {
 #include "sai.h"
 #include "saistatus.h"
 #include "saitypes.h"
-
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <inttypes.h>
 }
+#include <map>
 
+typedef std::map<std::string, std::string> sai_kv_pair_t;
+typedef std::map<std::string, std::string>::iterator kv_iter;
+static sai_kv_pair_t kvpair;
+
+const char* profile_get_value(sai_switch_profile_id_t profile_id,
+                                 const char* variable)
+{
+    kv_iter kviter;
+    std::string key;
+
+    if (variable ==  NULL)
+        return NULL;
+
+    key = variable;
+
+    kviter = kvpair.find(key);
+    if (kviter == kvpair.end()) {
+        return NULL;
+    }
+    return kviter->second.c_str();
+}
+int profile_get_next_value(sai_switch_profile_id_t profile_id,
+                           const char** variable,
+                           const char** value)
+{
+    kv_iter kviter;
+    std::string key;
+
+    if (variable == NULL || value == NULL) {
+        return -1;
+    }
+    if (*variable == NULL) {
+            if (kvpair.size() < 1) {
+            return -1;
+        }
+        kviter = kvpair.begin();
+    } else {
+        key = *variable;
+        kviter = kvpair.find(key);
+        if (kviter == kvpair.end()) {
+            return -1;
+        }
+        kviter++;
+        if (kviter == kvpair.end()) {
+            return -1;
+        }
+    }
+    *variable = (char *)kviter->first.c_str();
+    *value = (char *)kviter->second.c_str();
+    return 0;
+}
+
+
+void kv_populate(void)
+{
+    kvpair["SAI_INIT_CONFIG_FILE"] = "/etc/opt/dell/os10/sai/init.xml";
+    kvpair["SAI_NUM_ECMP_MEMBERS"] = "64";
+}
 
 class saiL3NextHopGroupTest : public saiL3Test
 {
@@ -154,14 +213,6 @@ void saiL3NextHopGroupTest::TearDownTestCase (void)
     status = sai_test_vrf_remove (vrf_id);
 
     EXPECT_EQ (SAI_STATUS_SUCCESS, status);
-
-    /* Reset the Max ECMP Paths attribute to its old value */
-    attr.id        = SAI_SWITCH_ATTR_ECMP_MEMBERS;
-    attr.value.u32 = prev_max_ecmp_paths_value;
-
-    status  = saiL3Test::switch_api_tbl_get()->set_switch_attribute (switch_id,
-                                               (const sai_attribute_t *)&attr);
-    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 }
 
 /*
@@ -181,26 +232,7 @@ void saiL3NextHopGroupTest::sai_test_setup_max_ecmp_paths (void)
 
     ASSERT_EQ (SAI_STATUS_SUCCESS, status);
 
-    prev_max_ecmp_paths_value = attr.value.u32;
-
-    /* Set the default Max ECMP Paths value */
-    attr.id        = SAI_SWITCH_ATTR_ECMP_MEMBERS;
-    attr.value.u32 = max_ecmp_paths;
-
-    status  = saiL3Test::switch_api_tbl_get()->set_switch_attribute (switch_id,
-                                               (const sai_attribute_t *)&attr);
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
-
-    /* Verify the Max ECMP Paths attribute */
-    memset (&attr, 0, sizeof (sai_attribute_t));
-
-    attr.id = SAI_SWITCH_ATTR_ECMP_MEMBERS;
-
-    status  = saiL3Test::switch_api_tbl_get()->get_switch_attribute (switch_id,1, &attr);
-
-    ASSERT_TRUE (attr.value.u32 == max_ecmp_paths);
-
-    printf ("Setup Max ECMP Paths attribute to %d.\n", max_ecmp_paths);
+    printf ("Setup Max ECMP Paths attribute to %d.\n", attr.value.u32);
 }
 
 /*
@@ -533,6 +565,21 @@ sai_test_remove_member_ids_from_group (sai_object_id_t  group_id,
 }
 
 /*
+ * Pass the service method table and do API intialize.
+ */
+TEST(sai_unit_test, api_init)
+{
+    sai_service_method_table_t  sai_service_method_table;
+    kv_populate();
+
+    sai_service_method_table.profile_get_value = profile_get_value;
+    sai_service_method_table.profile_get_next_value = profile_get_next_value;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,sai_api_initialize(0, &sai_service_method_table));
+}
+
+
+/*
  * Validate nexthop group creation and removal.
  */
 TEST_F (saiL3NextHopGroupTest, create_and_remove_ecmp_group)
@@ -572,6 +619,8 @@ TEST_F (saiL3NextHopGroupTest, add_nh_to_ecmp_group)
     sai_object_id_t      group_id = 0;
     const unsigned int   new_nh_count = 5;
 
+    sai_test_l3_switch_attributes_get();
+
     status = sai_test_nh_group_create (&group_id, p_nh_id_list,
                                        default_nh_group_attr_count,
                                        SAI_NEXT_HOP_GROUP_ATTR_TYPE,
@@ -592,6 +641,8 @@ TEST_F (saiL3NextHopGroupTest, add_nh_to_ecmp_group)
     printf ("Added NH Count: %d to Next Hop Group Id: 0x%" PRIx64 ".\n",
             new_nh_count, group_id);
 
+    sai_test_l3_switch_attributes_get();
+
     /* Verify the entire count of next hops are added in the group */
     sai_nh_group_verify_after_creation (group_id, SAI_NEXT_HOP_GROUP_TYPE_ECMP,
                                         (old_nh_count + new_nh_count),
@@ -602,6 +653,8 @@ TEST_F (saiL3NextHopGroupTest, add_nh_to_ecmp_group)
     EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
     sai_nh_group_verify_after_removal (group_id);
+
+    sai_test_l3_switch_attributes_get();
 }
 
 /*
@@ -615,6 +668,8 @@ TEST_F (saiL3NextHopGroupTest, remove_nh_from_ecmp_group)
     const unsigned int   new_nh_count = 15;
     sai_object_id_t     *p_new_nh_id_list = NULL;
     unsigned int         group_nh_count = 0;
+
+    sai_test_l3_switch_attributes_get();
 
     status = sai_test_nh_group_create (&group_id, p_nh_id_list,
                                        default_nh_group_attr_count,
@@ -643,6 +698,8 @@ TEST_F (saiL3NextHopGroupTest, remove_nh_from_ecmp_group)
                                         (old_nh_count + new_nh_count),
                                         p_nh_id_list);
 
+    sai_test_l3_switch_attributes_get();
+
     group_nh_count = old_nh_count + new_nh_count;
 
     /* Remove the set of new next hops from group */
@@ -659,11 +716,14 @@ TEST_F (saiL3NextHopGroupTest, remove_nh_from_ecmp_group)
                                          (group_nh_count - new_nh_count),
                                          new_nh_count, p_new_nh_id_list);
 
+    sai_test_l3_switch_attributes_get();
+
     status = sai_test_nh_group_remove (group_id);
 
     EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
     sai_nh_group_verify_after_removal (group_id);
+    sai_test_l3_switch_attributes_get();
 }
 
 /*
@@ -1299,6 +1359,199 @@ TEST_F (saiL3NextHopGroupTest, nh_list_get_attr_buffer_overflow)
 
     EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 
+    sai_nh_group_verify_after_removal (group_id);
+}
+
+/*
+ * Check if Maximum number of ECMP groups are creatable, with atleast two
+ * members in each group
+ */
+TEST_F (saiL3NextHopGroupTest, max_ecmp_group_create)
+{
+    sai_status_t    status;
+    sai_attribute_t attr;
+    unsigned int max_ecmp_group = 0;
+    unsigned int num_ecmp_group=0;
+    unsigned int num_ecmp_paths=0;
+    unsigned int paths_per_group=0;
+    const char     *p_neighbor_mac = "00:a1:a2:a3:a4:00";
+    char            ip_addr_str [64];
+    unsigned int    addr_byte3 = 0;
+    unsigned int    addr_byte4 = 0;
+
+    memset (&attr, 0, sizeof (sai_attribute_t));
+    attr.id        = SAI_SWITCH_ATTR_ECMP_MEMBERS;
+    status  = saiL3Test::switch_api_tbl_get()->get_switch_attribute (switch_id,1, &attr);
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    paths_per_group = attr.value.u32;
+    printf ("SAI Max ECMP Paths %d.\n", paths_per_group);
+
+    memset (&attr, 0, sizeof (sai_attribute_t));
+    attr.id = SAI_SWITCH_ATTR_NUMBER_OF_ECMP_GROUPS;
+    /* Retrieve and store the current Max ECMP Groups value */
+    status  = saiL3Test::switch_api_tbl_get()->get_switch_attribute (switch_id,1, &attr);
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    max_ecmp_group = attr.value.u32;
+    printf ("SAI MAX no. of ECMP groups =  %u\n", max_ecmp_group);
+    sai_object_id_t nh_id_list[paths_per_group];
+    sai_object_id_t group_id[max_ecmp_group];
+
+    for(num_ecmp_paths = 0; num_ecmp_paths < paths_per_group; num_ecmp_paths++) {
+        /* create ECMP paths */
+        if (addr_byte4 == 255) {
+            addr_byte4 = 0;
+            addr_byte3++;
+        }
+        addr_byte4++;
+        snprintf (ip_addr_str, sizeof (ip_addr_str), "20.0.%d.%d", addr_byte3,
+                addr_byte4);
+        status = sai_test_nexthop_create (&nh_id_list[num_ecmp_paths],
+                default_nh_attr_count,
+                SAI_NEXT_HOP_ATTR_TYPE,
+                SAI_NEXT_HOP_TYPE_IP,
+                SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID,
+                port_rif_id,
+                SAI_NEXT_HOP_ATTR_IP,
+                SAI_IP_ADDR_FAMILY_IPV4, ip_addr_str);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        status = sai_test_neighbor_create (port_rif_id, SAI_IP_ADDR_FAMILY_IPV4,
+                ip_addr_str,
+                default_neighbor_attr_count,
+                SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS,
+                p_neighbor_mac);
+
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    }
+    for (num_ecmp_group = 0; num_ecmp_group < max_ecmp_group; num_ecmp_group++) {
+        status = sai_test_nh_group_create (&group_id[num_ecmp_group], &nh_id_list[0],
+                default_nh_group_attr_count,
+                SAI_NEXT_HOP_GROUP_ATTR_TYPE,
+                SAI_NEXT_HOP_GROUP_TYPE_ECMP,
+                SAI_NEXT_HOP_GROUP_ATTR_NEXT_HOP_MEMBER_LIST,
+                paths_per_group);
+        if (status != SAI_STATUS_SUCCESS) {
+            printf ("ECMP Group creation Failed for %d group\n",num_ecmp_group);
+        }
+
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        sai_nh_group_verify_after_creation (group_id[num_ecmp_group], SAI_NEXT_HOP_GROUP_TYPE_ECMP,
+                paths_per_group, &nh_id_list[0]);
+
+    }
+    /* Delete All the ECMP Groups */
+    for (num_ecmp_group = 0; num_ecmp_group < max_ecmp_group; num_ecmp_group++) {
+        status = sai_test_nh_group_remove (group_id[num_ecmp_group]);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
+    addr_byte3 = 0;
+    addr_byte4 = 0;
+    /* Delete all the ECMP paths/Neighbor */
+    for (num_ecmp_paths = 0; num_ecmp_paths < paths_per_group; num_ecmp_paths++) {
+        status = sai_test_nexthop_remove (nh_id_list [num_ecmp_paths]);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+        if (addr_byte4 == 255) {
+            addr_byte4 = 0;
+            addr_byte3++;
+        }
+        addr_byte4++;
+        snprintf (ip_addr_str, sizeof (ip_addr_str), "20.0.%d.%d", addr_byte3,
+                addr_byte4);
+        status = sai_test_neighbor_remove (port_rif_id, SAI_IP_ADDR_FAMILY_IPV4,
+                ip_addr_str);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+    }
+    printf ("MAX ECMP group %d. created successfully.\n", max_ecmp_group);
+}
+
+/* Check if resilient hash can be enabled when creating a ECMP group */
+TEST_F (saiL3NextHopGroupTest, res_hash_enable_on_create)
+{
+    sai_status_t        status;
+    sai_object_id_t     group_id = 0;
+    sai_attribute_t   attr[2];
+    sai_attribute_t   get_attr;
+
+    memset (&attr, 0, sizeof (attr));
+    memset (&get_attr, 0, sizeof (get_attr));
+    attr[0].id = SAI_NEXT_HOP_GROUP_ATTR_TYPE;
+    attr[0].value.s32 = SAI_NEXT_HOP_GROUP_TYPE_ECMP;
+    attr[1].id = SAI_NEXT_HOP_GROUP_ATTR_EXTENSIONS_RESILIENT_HASH_ENABLE;
+    attr[1].value.booldata = true;
+
+    status = p_sai_nh_grp_api_tbl->create_next_hop_group (&group_id, switch_id,
+                                                          2, &attr[0]);
+
+    if (SAI_STATUS_NOT_SUPPORTED == status) {
+        printf ("Resilient Hash not supported \r\n");
+        return;
+    }
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    printf ("SAI Next Hop Group Object Id: 0x%" PRIx64 ".\n", group_id);
+
+    get_attr.id = SAI_NEXT_HOP_GROUP_ATTR_EXTENSIONS_RESILIENT_HASH_ENABLE;
+    status = p_sai_nh_grp_api_tbl->get_next_hop_group_attribute (group_id,1,
+                                                                  &get_attr);
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    EXPECT_EQ (true, get_attr.value.booldata);
+
+    status = p_sai_nh_grp_api_tbl->remove_next_hop_group (group_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+}
+/* Check if resilient hash can be enabled/disabled after creating a
+ * ECMP group 
+ */
+TEST_F (saiL3NextHopGroupTest, res_hash_enable_disable)
+{
+    sai_status_t        status;
+    const unsigned int  nh_count = max_ecmp_paths;
+    sai_object_id_t     group_id = 0;
+    sai_attribute_t get_attr;
+    sai_attribute_t set_attr;
+    memset (&get_attr, 0, sizeof (sai_attribute_t));
+    memset (&set_attr, 0, sizeof (sai_attribute_t));
+
+    status = sai_test_nh_group_create (&group_id, p_nh_id_list,
+            default_nh_group_attr_count,
+            SAI_NEXT_HOP_GROUP_ATTR_TYPE,
+            SAI_NEXT_HOP_GROUP_TYPE_ECMP,
+            SAI_NEXT_HOP_GROUP_ATTR_NEXT_HOP_MEMBER_LIST,
+            nh_count);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+    printf ("SAI Next Hop Group Object Id: 0x%" PRIx64 ".\n", group_id);
+
+    sai_nh_group_verify_after_creation (group_id, SAI_NEXT_HOP_GROUP_TYPE_ECMP,
+            nh_count, p_nh_id_list);
+
+    set_attr.id = SAI_NEXT_HOP_GROUP_ATTR_EXTENSIONS_RESILIENT_HASH_ENABLE;
+    set_attr.value.booldata = true;
+    status = p_sai_nh_grp_api_tbl->set_next_hop_group_attribute (group_id,
+            &set_attr);
+    if (status != SAI_STATUS_NOT_SUPPORTED) {
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        get_attr.id = SAI_NEXT_HOP_GROUP_ATTR_EXTENSIONS_RESILIENT_HASH_ENABLE;
+        status = p_sai_nh_grp_api_tbl->get_next_hop_group_attribute (group_id,1,
+                &get_attr);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (set_attr.value.booldata, get_attr.value.booldata);
+
+
+        set_attr.value.booldata = false;
+        status = p_sai_nh_grp_api_tbl->set_next_hop_group_attribute (group_id,
+                &set_attr);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        get_attr.id = SAI_NEXT_HOP_GROUP_ATTR_EXTENSIONS_RESILIENT_HASH_ENABLE;
+        status = p_sai_nh_grp_api_tbl->get_next_hop_group_attribute (group_id,1,
+                &get_attr);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+        EXPECT_EQ (set_attr.value.booldata, get_attr.value.booldata);
+    } else {
+        printf ("Resilient Hash not supported \r\n");
+    }
+    status = sai_test_nh_group_remove (group_id);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
     sai_nh_group_verify_after_removal (group_id);
 }
 

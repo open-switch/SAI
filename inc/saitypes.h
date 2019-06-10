@@ -801,6 +801,11 @@ typedef enum _sai_stats_mode_t
      * @brief Read and clear after reading
      */
     SAI_STATS_MODE_READ_AND_CLEAR,
+
+    /**
+     * @brief Sync the SDK/SW cached counter with HW and Read
+     */
+    SAI_STATS_MODE_SYNC_AND_READ,
 } sai_stats_mode_t;
 
 /**

@@ -895,34 +895,6 @@ TEST_F(saiL3VrfTest, vrf_attr_set_ttl_violation_pkt_action)
     EXPECT_EQ (SAI_STATUS_INVALID_ATTR_VALUE_0, sai_rc);
 }
 
-/*
- * Validate switch attribute set and get APIs for
- * SAI_SWITCH_ATTR_ECMP_MEMBERS attribute.
- */
-TEST_F(saiL3VrfTest, max_ecmp_paths_switch_attr_set)
-{
-    sai_status_t        status;
-    sai_attribute_t     attr;
-    const unsigned int  max_paths = 32;
-
-    memset (&attr, 0, sizeof (sai_attribute_t));
-
-    /* Set the Max ECMP Paths value */
-    attr.id        = SAI_SWITCH_ATTR_ECMP_MEMBERS;
-    attr.value.u32 = max_paths;
-
-    status  = saiL3Test::switch_api_tbl_get()->set_switch_attribute (switch_id,
-                                               (const sai_attribute_t *)&attr);
-    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
-
-    /* Verify the Max ECMP Paths attribute */
-    memset (&attr, 0, sizeof (sai_attribute_t));
-
-    status  = saiL3Test::switch_api_tbl_get()->get_switch_attribute (switch_id,1, &attr);
-
-    ASSERT_NE (attr.value.u32, max_paths);
-}
-
 int main (int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);

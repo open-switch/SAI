@@ -92,7 +92,7 @@ void kv_populate(void)
     kvpair["SAI_L3_NEIGHBOR_TABLE_SIZE"] = "16384";
     kvpair["SAI_L3_ROUTE_TABLE_SIZE"] = "131072";
     kvpair["SAI_NUM_CPU_QUEUES"] = "43";
-    kvpair["SAI_INIT_CONFIG_FILE"] = "/etc/opx/sai/init.xml";
+    kvpair["SAI_INIT_CONFIG_FILE"] = "/etc/opt/dell/os10/sai/init.xml";
     kvpair["SAI_NUM_ECMP_MEMBERS"] = "64";
 }
 
@@ -267,20 +267,37 @@ sai_port_api_t* switchInit ::sai_port_api_table = NULL;
 TEST_F(switchInit, attr_get)
 {
     sai_attribute_t sai_attr[3];
+    sai_status_t    status;
 
     sai_attr[0].id = SAI_SWITCH_ATTR_SWITCHING_MODE;
     sai_attr[0].value.s32 = SAI_SWITCH_SWITCHING_MODE_CUT_THROUGH;
 
-    ASSERT_EQ(SAI_STATUS_SUCCESS,
-              sai_switch_api_table->set_switch_attribute(switch_id,
-                                    (const sai_attribute_t*)&sai_attr[0]));
+    status = sai_switch_api_table->set_switch_attribute(switch_id,
+            (const sai_attribute_t*)&sai_attr[0]);
+    if (status == SAI_STATUS_ATTR_NOT_SUPPORTED_0) {
+        LOG_PRINT("Cut-through mode not supported !");
+        return;
+    }
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,status);
 
     sai_attr[0].id = SAI_SWITCH_ATTR_SWITCHING_MODE;
 
     ASSERT_EQ(SAI_STATUS_SUCCESS,sai_switch_api_table->
-              get_switch_attribute(switch_id,1,&sai_attr[0]));
+            get_switch_attribute(switch_id,1,&sai_attr[0]));
 
     ASSERT_EQ(SAI_SWITCH_SWITCHING_MODE_CUT_THROUGH,sai_attr[0].value.s32);
+
+    sai_attr[0].value.s32 = SAI_SWITCH_SWITCHING_MODE_STORE_AND_FORWARD;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_switch_api_table->set_switch_attribute(switch_id,
+                (const sai_attribute_t*)&sai_attr[0]));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,sai_switch_api_table->
+            get_switch_attribute(switch_id,1,&sai_attr[0]));
+
+    ASSERT_EQ(SAI_SWITCH_SWITCHING_MODE_STORE_AND_FORWARD,sai_attr[0].value.s32);
 }
 
 /*
@@ -777,6 +794,37 @@ TEST_F(switchInit, max_port_mtu_get)
     LOG_PRINT("Maximum PORT mtu is %d \r\n", sai_attr_get.value.u32);
 }
 
+TEST_F(switchInit, qos_rate_adjust)
+{
+    sai_attribute_t set_attr;
+    sai_attribute_t get_attr;
+
+    memset(&set_attr, 0, sizeof(set_attr));
+    set_attr.id = SAI_SWITCH_ATTR_EXTENSIONS_QOS_RATE_ADJUST;
+    set_attr.value.u8 = 20;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->set_switch_attribute(switch_id,(const sai_attribute_t*)&set_attr));
+
+    memset(&get_attr, 0, sizeof(get_attr));
+    get_attr.id = SAI_SWITCH_ATTR_EXTENSIONS_QOS_RATE_ADJUST;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->get_switch_attribute(switch_id,1,&get_attr));
+
+    ASSERT_EQ(get_attr.value.u8, set_attr.value.u8);
+
+    LOG_PRINT("QoS Rate adjust value is %d \r\n", get_attr.value.u8);
+
+    /* HW based counter statistics read */
+    set_attr.value.u8 = 0;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->set_switch_attribute(switch_id,(const sai_attribute_t*)&set_attr));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->get_switch_attribute(switch_id,1,&get_attr));
+
+    ASSERT_EQ(get_attr.value.u8, set_attr.value.u8);
+}
+
 /*
  * Get and print the list of ACL slice objects in the switch
  */
@@ -818,3 +866,36 @@ TEST_F(switchInit, attr_acl_slice_list_get)
         free(get_attr.value.objlist.list);
     }
 }
+
+TEST_F(switchInit, max_ecmp_paths_get)
+{
+    sai_attribute_t sai_attr_get;
+
+    memset(&sai_attr_get, 0, sizeof(sai_attribute_t));
+
+    sai_attr_get.id = SAI_SWITCH_ATTR_ECMP_MEMBERS;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->get_switch_attribute(switch_id,1, &sai_attr_get));
+
+    EXPECT_NE(sai_attr_get.value.u32, 0);
+
+    LOG_PRINT("Maximum ECMP Paths is %d \r\n", sai_attr_get.value.u32);
+}
+
+TEST_F(switchInit, max_ecmp_groups_get)
+{
+    sai_attribute_t sai_attr_get;
+
+    memset(&sai_attr_get, 0, sizeof(sai_attribute_t));
+
+    sai_attr_get.id = SAI_SWITCH_ATTR_NUMBER_OF_ECMP_GROUPS;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_switch_api_table->get_switch_attribute(switch_id,1, &sai_attr_get));
+
+    EXPECT_NE(sai_attr_get.value.u32, 0);
+
+    LOG_PRINT("Maximum ECMP groups is %d \r\n", sai_attr_get.value.u32);
+}
+

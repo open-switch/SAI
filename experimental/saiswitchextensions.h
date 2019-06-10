@@ -28,6 +28,8 @@
 #include <saitypes.h>
 #include <saiswitch.h>
 
+#define SAI_KEY_VXLAN_OVERLAY_ECMP_ENABLE      "SAI_KEY_VXLAN_OVERLAY_ECMP_ENABLE"
+
 /**
  * @brief Attribute data for #SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_MODE
  */
@@ -77,6 +79,23 @@ typedef enum _sai_switch_attr_extensions_t
      * @default false
      */
     SAI_SWITCH_ATTR_EXTENSIONS_BST_TRACKING_ENABLE,
+
+    /**
+     * @brief L3 Interface  user-based ACL meta data range
+     *
+     * @type sai_u32_range_t
+     * @flags READ_ONLY
+     */
+    SAI_SWITCH_ATTR_EXTENSIONS_LAYER3_INTERFACE_USER_META_DATA_RANGE,
+
+    /**
+     * @brief Update QoS rate adjust value of
+     *  policer and shaper
+     *
+     *  @type sai_uint8_t
+     *  @flags READ_ONLY
+     */
+    SAI_SWITCH_ATTR_EXTENSIONS_QOS_RATE_ADJUST,
 
     SAI_SWITCH_ATTR_EXTENSIONS_RANGE_END
 

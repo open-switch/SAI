@@ -25,6 +25,7 @@ extern "C" {
 #include "saitypes.h"
 #include "saistatus.h"
 #include "saibridge.h"
+#include "sainexthopgroupextensions.h"
 #include <string.h>
 }
 
@@ -134,6 +135,23 @@ TEST_F (saiTunnelTest, set_and_get_vxlan_tunnel_map_entry_object)
     sai_uint32_t       vnid_2                = 200;
     sai_uint32_t       attr_count            = 4;
     sai_attribute_t    tunnel_map_entry_attr_list[attr_count];
+
+    sai_kv_pair_t kvpair;
+    kv_iter kviter;
+
+    kvpair = kvpair_get();
+
+    kviter = kvpair.find(std::string(SAI_KEY_VXLAN_SCALED_MODE_ENABLE));
+    if (kviter == kvpair.end()) {
+        printf("Test case can be run only in non-scaled mode\n");
+        return;
+    }
+
+    /*If scale mode is disabled, skip test case*/
+    if(kviter->second.c_str() == std::string("1")) {
+        printf("Test case can be run only in non-scaled mode\n");
+        return;
+    }
 
     memset(&tunnel_map_entry_attr_list, 0, sizeof(tunnel_map_entry_attr_list));
 
@@ -394,6 +412,23 @@ TEST_F (saiTunnelTest, modify_encap_decap_mapping)
     sai_uint32_t       vnid_3                = 300;
     const char         *tunnel_sip           = "10.0.0.1";
     const char         *tunnel_dip           = "20.0.0.1";
+
+    sai_kv_pair_t kvpair;
+    kv_iter kviter;
+
+    kvpair = kvpair_get();
+
+    kviter = kvpair.find(std::string(SAI_KEY_VXLAN_SCALED_MODE_ENABLE));
+    if (kviter == kvpair.end()) {
+        printf("Test case can be run only in non-scaled mode\n");
+        return;
+    }
+
+    /*If scale mode is disabled, skip test case*/
+    if(kviter->second.c_str() == std::string("1")) {
+        printf("Test case can be run only in non-scaled mode\n");
+        return;
+    }
 
     sai_test_vxlan_1d_bridge_create(&bridge_id_1, true);
     sai_test_vxlan_1d_bridge_create(&bridge_id_2, true);
@@ -1338,7 +1373,7 @@ TEST_F (saiTunnelTest, vxlan_underlay_ecmp_lag_with_l2mc_flooding)
 
 TEST_F (saiTunnelTest, vxlan_underlay_vlan_rif_route_update)
 {
-
+    sai_status_t       status                = SAI_STATUS_SUCCESS;
     sai_object_id_t    bridge_id             = SAI_NULL_OBJECT_ID;
     sai_object_id_t    bridge_sub_port_id_1  = SAI_NULL_OBJECT_ID;
     sai_object_id_t    encap_map_id          = SAI_NULL_OBJECT_ID;
@@ -1412,6 +1447,17 @@ TEST_F (saiTunnelTest, vxlan_underlay_vlan_rif_route_update)
 
     sai_test_vxlan_fdb_entry_create(underlay_vlan_obj_id, nh_mac_str, underlay_bridge_port,
                                     false, NULL, true);
+
+    status = saiTunnelTest::sai_test_tunnel_fdb_entry_create(SAI_FDB_ENTRY_TYPE_DYNAMIC,
+                                                             underlay_vlan_obj_id,
+                                                             nh_mac_str,
+                                                             SAI_PACKET_ACTION_TRAP,
+                                                             SAI_NULL_OBJECT_ID,
+                                                             false, NULL);
+    ASSERT_EQ(status, SAI_STATUS_SUCCESS);
+
+    sai_test_vxlan_fdb_entry_create(underlay_vlan_obj_id, nh_mac_str, underlay_bridge_port,
+                                                                        false, NULL, true);
 
     sai_test_vxlan_fdb_entry_remove(underlay_vlan_obj_id, nh_mac_str, true);
 
@@ -1620,9 +1666,511 @@ TEST_F(saiTunnelTest, vxlan_1d_router_bridge_port_create_delete)
     EXPECT_EQ(SAI_STATUS_SUCCESS, sai_rc);
 }
 
+TEST_F (saiTunnelTest, create_and_remove_vxlan_overlay_neighbor)
+{
+    sai_status_t       sai_rc;
+    sai_object_id_t    bridge_id             = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    bridge_tunnel_port_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    vr_id_with_src_mac    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    underlay_rif_id       = dflt_port_rif_id;
+    sai_object_id_t    rif_id                = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    rif_bridge_port_id    = SAI_NULL_OBJECT_ID;
+    char               vrf_mac_str[]         = "00:00:00:00:aa:aa";
+    char               rif_mac_str[]         = "00:00:00:00:bb:bb";
+    sai_object_id_t    encap_map_id          = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    decap_map_id          = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    encap_map_entry_id    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    decap_map_entry_id    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    tunnel_id             = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    tunnel_term_id        = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    bridge_sub_port_id    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    bridge_sub_port_id2   = SAI_NULL_OBJECT_ID;
+    sai_uint32_t       vnid                  = 100;
+    const char         *tunnel_sip           = "10.0.0.1";
+    const char         *tunnel_dip           = "20.0.0.1";
+    const char         *overlay_ip_1         = "150.0.0.2";
+    const char         *overlay_mac_1        = "00:44:44:44:44:44";
+    const char         *overlay_ip_2         = "100.0.0.2";
+    const char         *overlay_mac_2        = "00:33:33:33:33:33";
+    const char         *mac_str_1            = "00:22:22:22:22:22";
+    const unsigned int vlan_id               = 10;
+    const unsigned int vlan_id2              = 20;
+    sai_ip_addr_family_t  ip4_af             = SAI_IP_ADDR_FAMILY_IPV4;
+    uint32_t           access_port_idx       = 2;
+
+    /*Create VRF*/
+    sai_rc = saiL3Test::sai_test_vrf_create (&vr_id_with_src_mac, 1,
+                                  SAI_VIRTUAL_ROUTER_ATTR_SRC_MAC_ADDRESS,
+                                  vrf_mac_str);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Create 1D Bridge RIF*/
+    sai_rc = saiL3Test::sai_test_rif_create (&rif_id, 3,
+                                  SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID,
+                                  vr_id_with_src_mac,
+                                  SAI_ROUTER_INTERFACE_ATTR_TYPE,
+                                  SAI_ROUTER_INTERFACE_TYPE_BRIDGE,
+                                  SAI_ROUTER_INTERFACE_ATTR_SRC_MAC_ADDRESS,
+                                  rif_mac_str);
+
+    if((sai_rc == SAI_STATUS_NOT_SUPPORTED) ||
+       ((SAI_STATUS_CODE(sai_rc) & ~0xFFFF) ==
+        SAI_STATUS_CODE(SAI_STATUS_ATTR_NOT_SUPPORTED_0))) {
+        printf("Bridge RIF creation not suported\r\n");
+        sai_rc = saiL3Test::sai_test_vrf_remove (vr_id_with_src_mac);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        return;
+    }
+
+    sai_test_vxlan_1d_bridge_create(&bridge_id, true);
+
+    /*Create 1D Router bridge port*/
+    sai_rc = sai_test_bridge_port_create(&rif_bridge_port_id, 3,
+                                         SAI_BRIDGE_PORT_ATTR_TYPE,
+                                         SAI_BRIDGE_PORT_TYPE_1D_ROUTER,
+                                         SAI_BRIDGE_PORT_ATTR_BRIDGE_ID,
+                                         bridge_id,
+                                         SAI_BRIDGE_PORT_ATTR_RIF_ID,
+                                         rif_id);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_test_vxlan_encap_tunnel_map_create(&encap_map_id, true);
+    sai_test_vxlan_decap_tunnel_map_create(&decap_map_id, true);
+
+    sai_test_vxlan_encap_map_entry_create(&encap_map_entry_id, encap_map_id,
+                                          bridge_id, vnid, true);
+    sai_test_vxlan_decap_map_entry_create(&decap_map_entry_id, decap_map_id,
+                                          vnid, bridge_id, true);
+
+    sai_test_vxlan_tunnel_create(&tunnel_id, dflt_underlay_rif_id, dflt_overlay_rif_id,
+                                 tunnel_sip, encap_map_id, decap_map_id, true);
+
+    sai_test_vxlan_access_port_create(&bridge_sub_port_id, bridge_id,
+                                      sai_test_tunnel_port_id_get(access_port_idx),
+                                      vlan_id, true);
+
+    sai_test_vxlan_access_port_create(&bridge_sub_port_id2, bridge_id,
+                                      sai_test_tunnel_port_id_get(access_port_idx),
+                                      vlan_id2, true);
+
+    sai_test_vxlan_tunnel_port_create(&bridge_tunnel_port_id, bridge_id,
+                                      tunnel_id, true);
+
+    sai_test_vxlan_tunnel_term_create(&tunnel_term_id, dflt_vr_id, tunnel_dip,
+                                      tunnel_sip, tunnel_id, true);
+
+    /*Create fdb entries for overlay macs before overlay neighbors are created*/
+
+    /*Point overlay mac 1 to access sub-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_1, bridge_sub_port_id,
+                                    false, NULL, true);
+
+    /*Point overlay mac 2 to tunnel bridge-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_2, bridge_tunnel_port_id,
+                                    true, tunnel_dip, true);
+
+    /*Overlay neighbor 1*/
+    sai_test_vxlan_neighbor_create(rif_id, ip4_af, overlay_ip_1, overlay_mac_1, true);
+
+    /*Overlay neighbor 2*/
+    sai_test_vxlan_neighbor_create(rif_id, ip4_af, overlay_ip_2, overlay_mac_2, true);
+
+    /*Tunnel dip is directly connected neighbor*/
+    sai_test_vxlan_neighbor_create(underlay_rif_id, ip4_af, tunnel_dip, mac_str_1, true);
+
+    /* Remove the fdb entries and see if the overlay neighbors are updated
+     * properly*/
+    sai_test_vxlan_fdb_entry_remove(bridge_id, overlay_mac_1, true);
+    sai_test_vxlan_fdb_entry_remove(bridge_id, overlay_mac_2, true);
+
+    /*Create the fdb entries back again*/
+    /*Point overlay mac 1 to access sub-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_1, bridge_sub_port_id,
+                                    false, NULL, true);
+
+    /*Point overlay mac 2 to tunnel bridge-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_2, bridge_tunnel_port_id,
+                                    true, tunnel_dip, true);
+
+    /*Move the macs*/
+    /*Now point overlay mac 2 to subport*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_2, bridge_sub_port_id,
+                                    false, NULL, true);
+
+    /*Point overlay mac 1 to tunnel bridge-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_1, bridge_tunnel_port_id,
+                                    true, tunnel_dip, true);
+
+    /*Trapping packets destined to tunnel dip to cpu*/
+    sai_rc = saiL3Test::sai_test_neighbor_attr_set (underlay_rif_id, ip4_af, tunnel_dip,
+                                                    SAI_NEIGHBOR_ENTRY_ATTR_PACKET_ACTION,
+                                                    SAI_PACKET_ACTION_TRAP, NULL);
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_test_vxlan_neighbor_remove(underlay_rif_id, ip4_af, tunnel_dip, true);
+    sai_test_vxlan_neighbor_remove(rif_id, ip4_af, overlay_ip_1, true);
+    sai_test_vxlan_neighbor_remove(rif_id, ip4_af, overlay_ip_2, true);
+    sai_test_vxlan_fdb_entry_remove(bridge_id, overlay_mac_1, true);
+    sai_test_vxlan_fdb_entry_remove(bridge_id, overlay_mac_2, true);
+    sai_test_vxlan_tunnel_term_remove(tunnel_term_id, true);
+    sai_test_vxlan_bridge_port_admin_state_set(bridge_tunnel_port_id, false, true);
+    sai_test_vxlan_bridge_port_admin_state_set(bridge_sub_port_id, false, true);
+    sai_test_vxlan_bridge_port_admin_state_set(bridge_sub_port_id2, false, true);
+    sai_test_vxlan_bridge_port_remove(bridge_tunnel_port_id, true);
+    sai_test_vxlan_bridge_port_remove(bridge_sub_port_id, true);
+    sai_test_vxlan_bridge_port_remove(bridge_sub_port_id2, true);
+    sai_test_vxlan_tunnel_remove(tunnel_id, true);
+    sai_test_vxlan_tunnel_map_entry_remove(decap_map_entry_id, true);
+    sai_test_vxlan_tunnel_map_entry_remove(encap_map_entry_id, true);
+    sai_test_vxlan_tunnel_map_remove(decap_map_id, true);
+    sai_test_vxlan_tunnel_map_remove(encap_map_id, true);
+
+    /*Remove 1D Router bridge port*/
+    sai_rc = sai_test_bridge_port_remove(rif_bridge_port_id);
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_test_vxlan_1d_bridge_remove (bridge_id, true);
+
+    /*Remove 1D RIF*/
+    sai_rc = saiL3Test::sai_test_rif_remove(rif_id);
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Remove VRF*/
+    sai_rc = saiL3Test::sai_test_vrf_remove(vr_id_with_src_mac);
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+
+}
+
+TEST_F (saiTunnelTest, create_and_remove_vxlan_overlay_route)
+{
+    sai_status_t       sai_rc;
+    sai_object_id_t    bridge_id             = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    bridge_tunnel_port_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    vr_id_with_src_mac    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    underlay_rif_id       = dflt_port_rif_id;
+    sai_object_id_t    rif_id                = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    overlay_bridge_nh_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    overlay_bridge_nh_id2 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    rif_bridge_port_id    = SAI_NULL_OBJECT_ID;
+    char               vrf_mac_str[]         = "00:00:00:00:aa:aa";
+    char               rif_mac_str[]         = "00:00:00:00:bb:bb";
+    sai_object_id_t    encap_map_id          = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    decap_map_id          = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    encap_map_entry_id    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    decap_map_entry_id    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    tunnel_id             = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    tunnel_term_id        = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    bridge_sub_port_id    = SAI_NULL_OBJECT_ID;
+    sai_uint32_t       vnid                  = 100;
+    const char         *tunnel_sip           = "10.0.0.1";
+    const char         *tunnel_dip           = "20.0.0.1";
+    const char         *overlay_ip_1         = "150.0.0.2";
+    const char         *overlay_mac_1        = "00:44:44:44:44:44";
+    const char         *overlay_ip_2         = "100.0.0.2";
+    const char         *overlay_mac_2        = "00:33:33:33:33:33";
+    const char         *mac_str_1            = "00:22:22:22:22:22";
+    const char         *prefix_str1          = "40.0.0.0";
+    const char         *prefix_str2          = "50.0.0.0";
+    const unsigned int prefix_len            = 24;
+    const unsigned int vlan_id               = 10;
+    sai_ip_addr_family_t  ip4_af             = SAI_IP_ADDR_FAMILY_IPV4;
+    uint32_t           access_port_idx       = 2;
+
+    /*Create VRF*/
+    sai_rc = saiL3Test::sai_test_vrf_create (&vr_id_with_src_mac, 1,
+                                  SAI_VIRTUAL_ROUTER_ATTR_SRC_MAC_ADDRESS,
+                                  vrf_mac_str);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Create 1D Bridge RIF*/
+    sai_rc = saiL3Test::sai_test_rif_create (&rif_id, 3,
+                                  SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID,
+                                  vr_id_with_src_mac,
+                                  SAI_ROUTER_INTERFACE_ATTR_TYPE,
+                                  SAI_ROUTER_INTERFACE_TYPE_BRIDGE,
+                                  SAI_ROUTER_INTERFACE_ATTR_SRC_MAC_ADDRESS,
+                                  rif_mac_str);
+
+    if((sai_rc == SAI_STATUS_NOT_SUPPORTED) ||
+       ((SAI_STATUS_CODE(sai_rc) & ~0xFFFF) ==
+        SAI_STATUS_CODE(SAI_STATUS_ATTR_NOT_SUPPORTED_0))) {
+        printf("Bridge RIF creation not suported\r\n");
+        sai_rc = saiL3Test::sai_test_vrf_remove (vr_id_with_src_mac);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+        return;
+    }
+
+        sai_test_vxlan_1d_bridge_create(&bridge_id, true);
+
+    /*Create 1D Router bridge port*/
+    sai_rc = sai_test_bridge_port_create(&rif_bridge_port_id, 3,
+                                         SAI_BRIDGE_PORT_ATTR_TYPE,
+                                         SAI_BRIDGE_PORT_TYPE_1D_ROUTER,
+                                         SAI_BRIDGE_PORT_ATTR_BRIDGE_ID,
+                                         bridge_id,
+                                         SAI_BRIDGE_PORT_ATTR_RIF_ID,
+                                         rif_id);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_test_vxlan_encap_tunnel_map_create(&encap_map_id, true);
+    sai_test_vxlan_decap_tunnel_map_create(&decap_map_id, true);
+
+    sai_test_vxlan_encap_map_entry_create(&encap_map_entry_id, encap_map_id,
+                                          bridge_id, vnid, true);
+    sai_test_vxlan_decap_map_entry_create(&decap_map_entry_id, decap_map_id,
+                                          vnid, bridge_id, true);
+
+    sai_test_vxlan_tunnel_create(&tunnel_id, dflt_underlay_rif_id, dflt_overlay_rif_id,
+                                 tunnel_sip, encap_map_id, decap_map_id, true);
+
+    sai_test_vxlan_access_port_create(&bridge_sub_port_id, bridge_id,
+                                      sai_test_tunnel_port_id_get(access_port_idx),
+                                      vlan_id, true);
+
+    sai_test_vxlan_tunnel_port_create(&bridge_tunnel_port_id, bridge_id,
+                                      tunnel_id, true);
+
+    sai_test_vxlan_tunnel_term_create(&tunnel_term_id, dflt_vr_id, tunnel_dip,
+                                      tunnel_sip, tunnel_id, true);
+
+    /*Create fdb entries for overlay macs before overlay neighbors are created*/
+
+    /*Point overlay mac 1 to access sub-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_1, bridge_sub_port_id,
+                                    false, NULL, true);
+
+    /*Point overlay mac 2 to tunnel bridge-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_2, bridge_tunnel_port_id,
+                                    true, tunnel_dip, true);
+
+    sai_rc = saiL3Test::sai_test_nexthop_create (&overlay_bridge_nh_id1,
+                                                 3,
+                                                 SAI_NEXT_HOP_ATTR_TYPE,
+                                                 SAI_NEXT_HOP_TYPE_IP,
+                                                 SAI_NEXT_HOP_ATTR_IP,
+                                                 SAI_IP_ADDR_FAMILY_IPV4,
+                                                 overlay_ip_1,
+                                                 SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID,
+                                                 rif_id);
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_rc = saiL3Test::sai_test_nexthop_create (&overlay_bridge_nh_id2,
+                                                 3,
+                                                 SAI_NEXT_HOP_ATTR_TYPE,
+                                                 SAI_NEXT_HOP_TYPE_IP,
+                                                 SAI_NEXT_HOP_ATTR_IP,
+                                                 SAI_IP_ADDR_FAMILY_IPV4,
+                                                 overlay_ip_2,
+                                                 SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID,
+                                                 rif_id);
+    ASSERT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+
+    /*Overlay route*/
+    sai_test_vxlan_route_create(vr_id_with_src_mac, ip4_af, prefix_str1, prefix_len,
+                                overlay_bridge_nh_id1, true);
+
+    /*Overlay route*/
+    sai_test_vxlan_route_create(vr_id_with_src_mac, ip4_af, prefix_str2, prefix_len,
+                                overlay_bridge_nh_id2, true);
+
+    /*Overlay neighbor 1*/
+    sai_test_vxlan_neighbor_create(rif_id, ip4_af, overlay_ip_1, overlay_mac_1, true);
+
+    /*Overlay neighbor 2*/
+    sai_test_vxlan_neighbor_create(rif_id, ip4_af, overlay_ip_2, overlay_mac_2, true);
+
+    /*Tunnel dip is directly connected neighbor*/
+    sai_test_vxlan_neighbor_create(underlay_rif_id, ip4_af, tunnel_dip, mac_str_1, true);
+
+    /* Remove the fdb entries and see if the overlay neighbors are updated
+     * properly*/
+    sai_test_vxlan_fdb_entry_remove(bridge_id, overlay_mac_1, true);
+    sai_test_vxlan_fdb_entry_remove(bridge_id, overlay_mac_2, true);
+
+    /*Create the fdb entries back again*/
+    /*Point overlay mac 1 to access sub-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_1, bridge_sub_port_id,
+                                    false, NULL, true);
+
+    /*Point overlay mac 2 to tunnel bridge-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_2, bridge_tunnel_port_id,
+                                    true, tunnel_dip, true);
+
+    /*Move the macs*/
+    /*Now point overlay mac 2 to subport*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_2, bridge_sub_port_id,
+                                    false, NULL, true);
+
+    /*Point overlay mac 1 to tunnel bridge-port*/
+    sai_test_vxlan_fdb_entry_create(bridge_id, overlay_mac_1, bridge_tunnel_port_id,
+                                    true, tunnel_dip, true);
+
+    /*Trapping packets destined to tunnel dip to cpu*/
+    sai_rc = saiL3Test::sai_test_neighbor_attr_set (underlay_rif_id, ip4_af, tunnel_dip,
+                                                    SAI_NEIGHBOR_ENTRY_ATTR_PACKET_ACTION,
+                                                    SAI_PACKET_ACTION_TRAP, NULL);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_test_vxlan_neighbor_remove(underlay_rif_id, ip4_af, tunnel_dip, true);
+    sai_test_vxlan_neighbor_remove(rif_id, ip4_af, overlay_ip_1, true);
+    sai_test_vxlan_neighbor_remove(rif_id, ip4_af, overlay_ip_2, true);
+    sai_test_vxlan_route_remove (vr_id_with_src_mac, ip4_af, prefix_str1, prefix_len, true);
+    sai_test_vxlan_route_remove (vr_id_with_src_mac, ip4_af, prefix_str2, prefix_len, true);
+    sai_rc = saiL3Test::sai_test_nexthop_remove(overlay_bridge_nh_id1);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    sai_rc = saiL3Test::sai_test_nexthop_remove(overlay_bridge_nh_id2);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    sai_test_vxlan_fdb_entry_remove(bridge_id, overlay_mac_1, true);
+    sai_test_vxlan_fdb_entry_remove(bridge_id, overlay_mac_2, true);
+    sai_test_vxlan_tunnel_term_remove(tunnel_term_id, true);
+    sai_test_vxlan_bridge_port_admin_state_set(bridge_tunnel_port_id, false, true);
+    sai_test_vxlan_bridge_port_admin_state_set(bridge_sub_port_id, false, true);
+    sai_test_vxlan_bridge_port_remove(bridge_tunnel_port_id, true);
+    sai_test_vxlan_bridge_port_remove(bridge_sub_port_id, true);
+    sai_test_vxlan_tunnel_remove(tunnel_id, true);
+    sai_test_vxlan_tunnel_map_entry_remove(decap_map_entry_id, true);
+    sai_test_vxlan_tunnel_map_entry_remove(encap_map_entry_id, true);
+    sai_test_vxlan_tunnel_map_remove(decap_map_id, true);
+    sai_test_vxlan_tunnel_map_remove(encap_map_id, true);
+
+    /*Remove 1D Router bridge port*/
+    sai_rc = sai_test_bridge_port_remove(rif_bridge_port_id);
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+
+    sai_test_vxlan_1d_bridge_remove (bridge_id, true);
+
+    /*Remove 1D RIF*/
+    sai_rc = saiL3Test::sai_test_rif_remove(rif_id);
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+
+        /*Remove VRF*/
+    sai_rc = saiL3Test::sai_test_vrf_remove(vr_id_with_src_mac);
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_rc);
+}
+
+TEST_F (saiTunnelTest, flood_data_packet_on_vxlan_l3_mc_group)
+{
+    sai_object_id_t    bridge_id             = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    bridge_tunnel_port_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    encap_map_id          = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    decap_map_id          = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    encap_map_entry_id    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    decap_map_entry_id    = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    tunnel_id             = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    tunnel_term_id        = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    bridge_sub_port_id    = SAI_NULL_OBJECT_ID;
+    sai_uint32_t       vnid                  = 100;
+    const char         *tunnel_sip           = "10.0.0.1";
+    const char         *tunnel_dip           = "20.0.0.1";
+    const char         *mac_str_1            = "00:22:22:22:22:22";
+    const char         *tenant_mac           = "00:00:00:00:00:bb";
+    const char         *access_mac           = "00:00:00:00:00:cc";
+    const unsigned int vlan_id               = 10;
+    uint32_t           access_port_idx       = 1;
+    sai_ip_addr_family_t  ip4_af             = SAI_IP_ADDR_FAMILY_IPV4;
+    sai_object_id_t    l2mc_group_id         = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    l2mc_member_id_1      = SAI_NULL_OBJECT_ID;
+    sai_object_id_t    l2mc_member_id_2      = SAI_NULL_OBJECT_ID;
+
+    sai_test_vxlan_1d_bridge_create(&bridge_id, true);
+
+    sai_test_vxlan_encap_tunnel_map_create(&encap_map_id, true);
+    sai_test_vxlan_decap_tunnel_map_create(&decap_map_id, true);
+
+    sai_test_vxlan_encap_map_entry_create(&encap_map_entry_id, encap_map_id,
+                                          bridge_id, vnid, true);
+
+    sai_test_vxlan_decap_map_entry_create(&decap_map_entry_id, decap_map_id,
+                                          vnid, bridge_id, true);
+
+    sai_test_vxlan_tunnel_create(&tunnel_id, dflt_underlay_rif_id, dflt_overlay_rif_id,
+                                 tunnel_sip, encap_map_id, decap_map_id, true);
+
+    sai_test_vxlan_access_port_create(&bridge_sub_port_id, bridge_id,
+                                      sai_test_tunnel_port_id_get(access_port_idx), vlan_id, true);
+
+    sai_test_vxlan_tunnel_port_create(&bridge_tunnel_port_id, bridge_id,
+                                      tunnel_id, true);
+
+    /* This should fail as tunnel termination entry for the tunnel dip has not
+     * been created first */
+    sai_test_vxlan_fdb_entry_create(bridge_id, tenant_mac, bridge_tunnel_port_id,
+                                    true, tunnel_dip, false);
+
+    sai_test_vxlan_tunnel_term_create(&tunnel_term_id, dflt_vr_id, tunnel_dip,
+                                      tunnel_sip, tunnel_id, true);
+
+    sai_test_vxlan_fdb_entry_create(bridge_id, tenant_mac, bridge_tunnel_port_id,
+                                    true, tunnel_dip, true);
+
+    sai_test_vxlan_fdb_entry_create(bridge_id, access_mac, bridge_sub_port_id,
+                                    false, NULL, true);
+
+
+    /*Tunnel dip is directly connected neighbor*/
+    sai_test_vxlan_neighbor_create(dflt_port_rif_id, ip4_af, tunnel_dip, mac_str_1, true);
+
+    sai_test_vxlan_l2mc_group_create(&l2mc_group_id, true);
+    sai_test_vxlan_l2mc_group_member_create(&l2mc_member_id_1, l2mc_group_id, bridge_sub_port_id,
+                                                false, NULL, true);
+    sai_test_vxlan_l2mc_group_member_create(&l2mc_member_id_2, l2mc_group_id, bridge_tunnel_port_id,
+                                                    true, tunnel_dip, true);
+
+    sai_test_vxlan_1d_bridge_l2mc_groups_set(bridge_id, true, l2mc_group_id, true, l2mc_group_id,
+                                             true, l2mc_group_id, true);
+
+    sai_test_vxlan_flood_packet_on_vxlan_l3mc_index(bridge_id, l2mc_group_id);
+
+    sai_test_vxlan_l2mc_group_member_remove(l2mc_member_id_1, true);
+    sai_test_vxlan_l2mc_group_member_remove(l2mc_member_id_2, true);
+    sai_test_vxlan_1d_bridge_l2mc_groups_set(bridge_id, false ,  SAI_NULL_OBJECT_ID,
+                                            false, SAI_NULL_OBJECT_ID, false,
+                                            SAI_NULL_OBJECT_ID, true);
+    sai_test_vxlan_l2mc_group_remove(l2mc_group_id, true);
+
+    sai_test_vxlan_neighbor_remove(dflt_port_rif_id, ip4_af, tunnel_dip, true);
+
+    sai_test_vxlan_fdb_entry_remove(bridge_id, tenant_mac, true);
+    sai_test_vxlan_fdb_entry_remove(bridge_id, access_mac, true);
+    sai_test_vxlan_tunnel_term_remove (tunnel_term_id, true);
+    sai_test_vxlan_bridge_port_admin_state_set(bridge_tunnel_port_id, false, true);
+    sai_test_vxlan_bridge_port_admin_state_set(bridge_sub_port_id, false, true);
+    sai_test_vxlan_bridge_port_remove(bridge_tunnel_port_id, true);
+    sai_test_vxlan_bridge_port_remove(bridge_sub_port_id, true);
+    sai_test_vxlan_tunnel_remove (tunnel_id, true);
+    sai_test_vxlan_tunnel_map_entry_remove (decap_map_entry_id, true);
+    sai_test_vxlan_tunnel_map_entry_remove (encap_map_entry_id, true);
+    sai_test_vxlan_tunnel_map_remove (decap_map_id, true);
+    sai_test_vxlan_tunnel_map_remove (encap_map_id, true);
+    sai_test_vxlan_1d_bridge_remove (bridge_id, true);
+}
+
+TEST_F (saiTunnelTest, overlay_next_hop_group_create_remove){
+
+    sai_object_id_t  overlay_nhg_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t  status;
+    status = saiL3Test::sai_test_nh_group_create (&overlay_nhg_id, NULL,
+                                                  2,
+                                                  SAI_NEXT_HOP_GROUP_ATTR_TYPE,
+                                                  SAI_NEXT_HOP_GROUP_TYPE_ECMP,
+                                                  SAI_NEXT_HOP_GROUP_ATTR_EXTENSIONS_OVERLAY,
+                                                  true);
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+    status =  saiL3Test::sai_test_nh_group_remove(overlay_nhg_id);
+
+    EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+}
+
+
+
 int main (int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
-

@@ -1,3 +1,11 @@
+opx-sai-api (38.1.0) unstable; urgency=medium
+
+  * Feature: SAI API VXLAN overlay ecmp changes
+  * Update: Scaled VXLAN mode support
+  * Update: Introduced a new SAI attribute for polling S,G entry actively forwarded in H/W or not
+
+ -- Dell EMC <ops-dev@lists.openswitch.net>  Mon, 18 Mar 2019 11:45:33 -0800
+
 opx-sai-api (37.0.0) unstable; urgency=medium
 
   * Feature: Buffer Statistics

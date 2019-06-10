@@ -1106,6 +1106,228 @@ TEST_F (saiL3RouteTest, route_next_hop_with_no_host_route_attr)
     EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
 }
 
+TEST_F (saiL3RouteTest, switch_route_attr_get)
+{
+    sai_status_t            sai_rc = SAI_STATUS_SUCCESS;
+    unsigned int            last_byte= 1;
+    unsigned int            pen_ulti_byte = 1;
+    char                    ip_str[64];
+    char                    mac_str[64];
+    char                    prefix_str[64];
+    unsigned int            prefix_len = 24;
+    sai_ip_addr_family_t    family = SAI_IP_ADDR_FAMILY_IPV4;
+    const int               ct = 27;
+    unsigned int            id = 0;
+    unsigned int            test_port[ct];
+    unsigned int            sai_port[ct];
+    sai_object_id_t         nh_id[ct];
+    sai_object_id_t         rif_id[ct];
+
+    memset(sai_port, 0, sizeof(sai_port));
+    memset(nh_id, 0, sizeof(nh_id));
+    memset(rif_id, 0, sizeof(rif_id));
+
+    sai_test_l3_switch_attributes_get();
+
+    /* Create routes */
+    for(id=0; id<ct; id++) {
+        snprintf (prefix_str, sizeof (prefix_str), "10.1.%d.0", pen_ulti_byte);
+        pen_ulti_byte++;
+        sai_rc = sai_test_route_create (vr_id, family, prefix_str, prefix_len,
+                                    1, SAI_ROUTE_ENTRY_ATTR_NEXT_HOP_ID, nh_id_1);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        sai_test_route_attr_verify (vr_id, family, prefix_str, prefix_len,
+                                SAI_ROUTE_ENTRY_ATTR_NEXT_HOP_ID, nh_id_1,
+                                SAI_TEST_ROUTE_DFLT_PKT_ACTION,
+                                SAI_TEST_ROUTE_DFLT_TRAP_PRIO);
+    }
+    /* Get l3 switch attributes - newly added route*/
+    sai_test_l3_switch_attributes_get();
+
+    /* Remove Routes */
+    pen_ulti_byte = 1;
+    for(id=0; id<ct; id++) {
+        snprintf (prefix_str, sizeof (prefix_str), "10.1.%d.0", pen_ulti_byte);
+        pen_ulti_byte++;
+        sai_test_route_remove_and_verify (vr_id, family, prefix_str, prefix_len);
+    }
+    /* Get l3 switch attributes - deleted route*/
+    sai_test_l3_switch_attributes_get();
+
+    pen_ulti_byte = 1;
+    for(id=0; id<ct; id++) {
+        test_port[id] = id+2;
+        sai_port[id] = sai_l3_port_id_get (test_port[id]);
+
+        /* RIF creation */
+        sai_rc = sai_test_rif_create (&rif_id[id], default_rif_attr_count,
+                                  SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID,
+                                  vr_id,
+                                  SAI_ROUTER_INTERFACE_ATTR_TYPE,
+                                  SAI_ROUTER_INTERFACE_TYPE_PORT,
+                                  SAI_ROUTER_INTERFACE_ATTR_PORT_ID,
+                                  sai_port[id]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        /* Next-hop Creation */
+        snprintf (ip_str, sizeof (ip_str), "100.0.%d.1", pen_ulti_byte);
+        pen_ulti_byte++;
+        sai_rc = sai_test_nexthop_create (&nh_id[id], default_nh_attr_count,
+                                      SAI_NEXT_HOP_ATTR_TYPE, SAI_NEXT_HOP_TYPE_IP,
+                                      SAI_NEXT_HOP_ATTR_IP,
+                                      SAI_IP_ADDR_FAMILY_IPV4, ip_str,
+                                      SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID,
+                                      rif_id[id]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        /* Neighbor creation */
+        snprintf (mac_str, sizeof(mac_str), "00:00:00:01:00:%d", last_byte);
+        last_byte++;
+        sai_rc = sai_test_neighbor_create (rif_id[id], SAI_IP_ADDR_FAMILY_IPV4,
+                                       ip_str, default_neighbor_attr_count,
+                                       SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS,
+                                       mac_str);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    }
+
+    /* Get l3 switch attributes - newly added route*/
+    sai_test_l3_switch_attributes_get();
+
+    pen_ulti_byte = 1;
+    for(id=0; id<ct; id++) {
+        /* Remove each Next-hop */
+        sai_rc = sai_test_nexthop_remove (nh_id[id]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        snprintf (ip_str, sizeof (ip_str), "100.0.%d.1", pen_ulti_byte);
+        pen_ulti_byte++;
+
+        /* Remove each neighbor */
+        sai_rc = sai_test_neighbor_remove (rif_id[id], SAI_IP_ADDR_FAMILY_IPV4,
+                                     ip_str);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        /* Remove each RIF */
+        sai_rc = sai_test_rif_remove (rif_id[id]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    }
+    /* Get l3 switch attributes - verify default configs only exist */
+    sai_test_l3_switch_attributes_get();
+}
+
+TEST_F (saiL3RouteTest, switch_l3_multipath_attr_get)
+{
+    sai_status_t       sai_rc = SAI_STATUS_SUCCESS;
+    char               ip_str[64];
+    unsigned int       pen_ulti_byte = 1;
+    unsigned int       last_byte= 1;
+    char               mac_str[64];
+    const int          ct = 27;
+    sai_object_id_t    nh_list [7];
+    unsigned int       i = 0, id = 0, ecmp_count = 2, temp = 0;
+    unsigned int       test_port[ct];
+    unsigned int       sai_port[ct];
+    sai_object_id_t    nh_id[ct];
+    sai_object_id_t    rif_id[ct];
+    sai_object_id_t    nh_grp_id[ct];
+
+    memset(nh_list, 0, sizeof(nh_list));
+    memset(sai_port, 0, sizeof(sai_port));
+    memset(nh_id, 0, sizeof(nh_id));
+    memset(rif_id, 0, sizeof(rif_id));
+    memset(nh_grp_id, 0, sizeof(nh_grp_id));
+
+    sai_test_l3_switch_attributes_get();
+
+    /* Create 27 RIFs, NextHops, Neighbors and ECMP groups */
+    for(id=0; id<ct; id++) {
+        test_port[id] = id+2;
+        sai_port[id] = sai_l3_port_id_get (test_port[id]);
+
+        /* RIF creation */
+        sai_rc = sai_test_rif_create (&rif_id[id], default_rif_attr_count,
+                                  SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID,
+                                  vr_id,
+                                  SAI_ROUTER_INTERFACE_ATTR_TYPE,
+                                  SAI_ROUTER_INTERFACE_TYPE_PORT,
+                                  SAI_ROUTER_INTERFACE_ATTR_PORT_ID,
+                                  sai_port[id]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        /* Next-hop Creation */
+        snprintf (ip_str, sizeof (ip_str), "100.0.%d.1", pen_ulti_byte);
+        pen_ulti_byte++;
+        sai_rc = sai_test_nexthop_create (&nh_id[id], default_nh_attr_count,
+                                      SAI_NEXT_HOP_ATTR_TYPE, SAI_NEXT_HOP_TYPE_IP,
+                                      SAI_NEXT_HOP_ATTR_IP,
+                                      SAI_IP_ADDR_FAMILY_IPV4, ip_str,
+                                      SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID,
+                                      rif_id[id]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        /* Neighbor creation */
+        snprintf (mac_str, sizeof(mac_str), "00:00:00:01:00:%d", last_byte);
+        last_byte++;
+        sai_rc = sai_test_neighbor_create (rif_id[id], SAI_IP_ADDR_FAMILY_IPV4,
+                                       ip_str, default_neighbor_attr_count,
+                                       SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS,
+                                       mac_str);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    }
+
+    /* Next-hop Groups(6) Creation */
+    for(id = 0; id<6; id++) {
+        for (i = 0; i < (ecmp_count+id); i++) {
+            nh_list[i] = nh_id[temp++];
+        }
+        /* Next-hop Group Creation */
+        sai_rc = sai_test_nh_group_create (&nh_grp_id[id], nh_list,
+                                       default_nh_group_attr_count,
+                                       SAI_NEXT_HOP_GROUP_ATTR_TYPE,
+                                       SAI_NEXT_HOP_GROUP_TYPE_ECMP,
+                                       SAI_NEXT_HOP_GROUP_ATTR_NEXT_HOP_MEMBER_LIST,
+                                       ecmp_count+id);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    }
+    /* Get l3 switch attributes - newly added multipath objects */
+    sai_test_l3_switch_attributes_get();
+
+    pen_ulti_byte = 1;
+    temp = 0;
+    for(id=0; id<6; id++) {
+        for (i = 0; i < (ecmp_count+id); i++) {
+            nh_list[i] = nh_id[temp++];
+        }
+        /* Remove Next-hops from each Next-hop Group */
+        sai_rc = sai_test_remove_nh_from_group (nh_grp_id[id], (ecmp_count+id), nh_list);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        /* Remove each Next-hop Group */
+        sai_rc = sai_test_nh_group_remove (nh_grp_id[id]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    }
+
+    for(id=0; id<ct; id++) {
+        /* Remove each Next-hop */
+        sai_rc = sai_test_nexthop_remove (nh_id[id]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        /* Remove each Neighbor*/
+        snprintf (ip_str, sizeof (ip_str), "100.0.%d.1", pen_ulti_byte);
+        pen_ulti_byte++;
+        sai_rc = sai_test_neighbor_remove (rif_id[id], SAI_IP_ADDR_FAMILY_IPV4,
+                                     ip_str);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+
+        /* Remove each RIF */
+        sai_rc = sai_test_rif_remove (rif_id[id]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    }
+    /* Get l3 switch attributes - verify default configs only exist */
+    sai_test_l3_switch_attributes_get();
+}
+
 int main (int argc, char **argv)
 {
     ::testing::InitGoogleTest(&argc, argv);

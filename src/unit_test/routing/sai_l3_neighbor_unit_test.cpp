@@ -974,6 +974,77 @@ TEST_F (saiL3NeighborTest, neighbor_entry_vrf_leaking)
     EXPECT_EQ (SAI_STATUS_SUCCESS, status);
 }
 
+TEST_F (saiL3NeighborTest, switch_fdb_entries_attr_get)
+{
+    sai_status_t        status = SAI_STATUS_SUCCESS;
+    const int           ct = bridge_port_count;
+    int                 last_byte= 1, i = 0, temp;
+    sai_object_id_t     vlan_id[ct];
+    sai_object_id_t     bridge_port_id;
+    char                mac_str[64];
+    unsigned int        count = 0, expected_ct = 0;
+
+    printf(" Bridge ports ct: %d\n", bridge_port_count);
+    count = sai_test_fdb_switch_attributes_get();
+    expected_ct = count;
+
+    /* Create Vlan */
+    for(i=0; i<ct; i++) {
+        status = sai_test_vlan_create (&vlan_id[i], 100+i);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    }
+
+    for(i=0; i<ct; i++) {
+        bridge_port_id = sai_l3_bridge_port_id_get (i);
+        /* Create L2 entry */
+        snprintf (mac_str, sizeof(mac_str), "00:01:c2:c3:c4:%x", last_byte);
+        last_byte++;
+        status = sai_test_neighbor_fdb_entry_create (mac_str, vlan_id[i],
+                                                    bridge_port_id);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    }
+
+    /* Get L2 entries available count after 'bridge_port_count' L2 entries creation */
+    count = sai_test_fdb_switch_attributes_get();
+    expected_ct -= ct;
+    EXPECT_EQ(expected_ct, count);
+
+    /* Station move */
+    last_byte = 1;
+    temp = (ct/4);
+    for(i=0; i<(ct/4); i++) {
+        bridge_port_id = sai_l3_bridge_port_id_get (--temp);
+        /* Station-move for 1/4 of configured MAC */
+        snprintf (mac_str, sizeof(mac_str), "00:01:c2:c3:c4:%x", last_byte);
+        last_byte++;
+        status = sai_test_neighbor_fdb_entry_create (mac_str, vlan_id[i],
+                                                     bridge_port_id);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    }
+
+    /* Get L2 entries available count after 1/4(bridge_port_count) L2 entries station move */
+    count = sai_test_fdb_switch_attributes_get();
+    EXPECT_EQ(expected_ct, count);
+
+    last_byte = 1;
+    for(i=0; i<ct; i++) {
+        /* Remove the configured L2 entries */
+        snprintf (mac_str, sizeof(mac_str), "00:01:c2:c3:c4:%x", last_byte);
+        last_byte++;
+        status = sai_test_neighbor_fdb_entry_remove (mac_str, vlan_id[i]);
+        EXPECT_EQ (SAI_STATUS_SUCCESS, status);
+
+        /* Remove Vlan */
+        status = sai_test_vlan_remove (vlan_id[i]);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    }
+
+    /* Get L2 entries available count after L2 entries removal */
+    expected_ct += ct;
+    count = sai_test_fdb_switch_attributes_get();
+    EXPECT_EQ(expected_ct, count);
+}
+
 int main (int argc, char **argv)
 {
     ::testing::InitGoogleTest (&argc, argv);

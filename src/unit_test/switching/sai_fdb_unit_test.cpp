@@ -1117,3 +1117,42 @@ TEST_F(fdbInit, fdb_entry_supported_actions)
             sai_fdb_api_table->remove_fdb_entry(
                 (const sai_fdb_entry_t*)&fdb_entry));
 }
+
+TEST_F(fdbInit, fdb_entry_trap_action)
+{
+    sai_fdb_entry_t fdb_entry;
+    sai_attribute_t set_attr;
+    sai_attribute_t attr_list[2];
+
+    sai_set_test_fdb_entry(&fdb_entry, bridge_port_id_1);
+
+    memset(attr_list,0, sizeof(attr_list));
+    attr_list[0].id = SAI_FDB_ENTRY_ATTR_TYPE;
+    attr_list[0].value.s32 = SAI_FDB_ENTRY_TYPE_DYNAMIC;
+
+    attr_list[1].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
+    attr_list[1].value.s32 = SAI_PACKET_ACTION_TRAP;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_fdb_api_table->create_fdb_entry((const sai_fdb_entry_t*)&fdb_entry,
+                                                  2, (const sai_attribute_t*)attr_list));
+
+    printf("Setting bridge port in fdb entry\n");
+    set_attr.id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
+    set_attr.value.oid = bridge_port_id_1;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_fdb_api_table->set_fdb_entry_attribute(&fdb_entry, &set_attr));
+
+    printf("Setting packet action as forward in fdb entry\n");
+    set_attr.id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
+    set_attr.value.s32 = SAI_PACKET_ACTION_FORWARD;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_fdb_api_table->set_fdb_entry_attribute(&fdb_entry, &set_attr));
+
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_fdb_api_table->remove_fdb_entry((const sai_fdb_entry_t*)&fdb_entry));
+
+}
