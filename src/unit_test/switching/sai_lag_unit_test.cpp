@@ -14,10 +14,9 @@
 #include <string.h>
 #include <stdio.h>
 #include "gtest/gtest.h"
-#include <inttypes.h>
 #include "std_type_defs.h"
-
 #include "sai_bridge_unit_test_utils.h"
+#include "sailagextensions.h"
 
 extern "C" {
 #include "sai.h"
@@ -880,5 +879,93 @@ TEST_F(lagInit, port_attributes_on_lag_member_remove)
     ASSERT_EQ(get_attr[3].value.booldata, false);
     ASSERT_EQ (SAI_STATUS_SUCCESS,
                sai_lag_api_table->remove_lag (lag_id_1));
+
+}
+TEST_F(lagInit, resilient_hash_enable_on_create)
+{
+    sai_object_id_t lag_id = 0;
+    sai_object_id_t lag_bridge_port = 0;
+    sai_attribute_t get_attr;
+    sai_attribute_t set_attr;
+    sai_status_t status;
+
+    set_attr.id =  SAI_LAG_ATTR_EXTENSIONS_RESILIENT_HASH_ENABLE;
+    set_attr.value.booldata = true;
+    status = sai_lag_api_table->create_lag(&lag_id, switch_id,1, &set_attr);
+    if (status == SAI_STATUS_NOT_SUPPORTED) {
+        printf("Resilient hashing not supported.\r\n");
+        return;
+    }
+    ASSERT_EQ(SAI_STATUS_SUCCESS,status);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_ut_create_bridge_port(p_sai_bridge_api_tbl, switch_id, lag_id, &lag_bridge_port));
+
+
+    get_attr.id = set_attr.id;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_api_table->get_lag_attribute(lag_id,1, &get_attr));
+    ASSERT_EQ(set_attr.value.booldata, get_attr.value.booldata);
+
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id, lag_bridge_port));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_api_table->remove_lag(lag_id));
+
+}
+
+
+TEST_F(lagInit, resilient_hash_enable_disable)
+{
+    sai_object_id_t lag_id = 0;
+    sai_object_id_t lag_bridge_port = 0;
+    sai_attribute_t get_attr;
+    sai_attribute_t set_attr;
+    sai_status_t    status;
+
+    memset (&get_attr, 0, sizeof (sai_attribute_t));
+    memset (&set_attr, 0, sizeof (sai_attribute_t));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_api_table->create_lag(&lag_id, switch_id,0, NULL));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_ut_create_bridge_port(p_sai_bridge_api_tbl, switch_id, lag_id, &lag_bridge_port));
+
+    /*  Enable Resilient Hashing */
+    set_attr.id =  SAI_LAG_ATTR_EXTENSIONS_RESILIENT_HASH_ENABLE;
+    set_attr.value.booldata =  true;
+    status = sai_lag_api_table->set_lag_attribute(lag_id, &set_attr);
+
+    if (status == SAI_STATUS_NOT_SUPPORTED) {
+        printf("Resilient hashing not supported.\r\n");
+        return;
+    }
+    ASSERT_EQ(SAI_STATUS_SUCCESS, status);
+    get_attr.id = set_attr.id;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_api_table->get_lag_attribute(lag_id,1, &get_attr));
+    ASSERT_EQ(set_attr.value.booldata, get_attr.value.booldata);
+
+
+    /*  Disable Resilient Hashing */
+    set_attr.value.booldata =  false;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+                sai_lag_api_table->set_lag_attribute(lag_id, &set_attr));
+
+    get_attr.id = set_attr.id;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_api_table->get_lag_attribute(lag_id,1, &get_attr));
+    ASSERT_EQ(set_attr.value.booldata, get_attr.value.booldata);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id, lag_bridge_port));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_lag_api_table->remove_lag(lag_id));
 
 }

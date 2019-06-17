@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include "gtest/gtest.h"
 #include "inttypes.h"
+#include "sai_bridge_unit_test_utils.h"
 
 extern "C" {
 #include "sai.h"
@@ -29,6 +30,8 @@ extern "C" {
 
 static uint32_t bridge_port_count = 0;
 static sai_object_id_t bridge_port_list[SAI_MAX_PORTS] = {0};
+static uint32_t port_count = 0;
+static sai_object_id_t port_list[SAI_MAX_PORTS] = {0};
 static sai_object_id_t switch_id = 0;
 static sai_object_id_t default_bridge_id = 0;
 static sai_object_id_t default_vlan_id = 0;
@@ -104,6 +107,24 @@ class vlanTest : public ::testing::Test
 
             ASSERT_TRUE (p_sai_bridge_api_tbl != NULL);
 
+            ASSERT_EQ(NULL,sai_api_query(SAI_API_L2MC_GROUP,
+                        (static_cast<void**>(static_cast<void*>(&sai_l2mc_group_api_table)))));
+
+            ASSERT_TRUE(sai_l2mc_group_api_table != NULL);
+
+            ASSERT_EQ(NULL,sai_api_query(SAI_API_LAG,
+                        (static_cast<void**>(static_cast<void*>(&p_sai_lag_api_tbl)))));
+
+            ASSERT_TRUE (p_sai_lag_api_tbl != NULL);
+
+
+            EXPECT_TRUE(sai_l2mc_group_api_table->create_l2mc_group != NULL);
+            EXPECT_TRUE(sai_l2mc_group_api_table->remove_l2mc_group != NULL);
+            EXPECT_TRUE(sai_l2mc_group_api_table->set_l2mc_group_attribute != NULL);
+            EXPECT_TRUE(sai_l2mc_group_api_table->get_l2mc_group_attribute != NULL);
+            EXPECT_TRUE(sai_l2mc_group_api_table->create_l2mc_group_member != NULL);
+            EXPECT_TRUE(sai_l2mc_group_api_table->remove_l2mc_group_member != NULL);
+
             sai_attribute_t attr;
             sai_status_t ret;
             memset (&attr, 0, sizeof (attr));
@@ -127,21 +148,42 @@ class vlanTest : public ::testing::Test
             bridge_port_id_1 = bridge_port_list[0];
             bridge_port_id_2 = bridge_port_list[bridge_port_count-1];
             bridge_port_id_invalid = SAI_NULL_OBJECT_ID;
+
+            sai_attribute_t sai_port_attr;
+
+            memset (&sai_port_attr, 0, sizeof (sai_port_attr));
+
+            sai_port_attr.id = SAI_SWITCH_ATTR_PORT_LIST;
+            sai_port_attr.value.objlist.count = SAI_MAX_PORTS;
+            sai_port_attr.value.objlist.list  = port_list;
+
+            ret = p_sai_switch_api_tbl->get_switch_attribute(0,1,&sai_port_attr);
+            port_count = sai_port_attr.value.objlist.count;
+            EXPECT_EQ (SAI_STATUS_SUCCESS,ret);
+            port_id_1 = port_list[0];
+            port_id_2 = port_list[port_count-1];
         }
 
         static sai_vlan_api_t* sai_vlan_api_table;
+        static sai_l2mc_group_api_t* sai_l2mc_group_api_table;
+        static sai_lag_api_t *p_sai_lag_api_tbl;
         static sai_object_id_t  bridge_port_id_1;
         static sai_object_id_t  bridge_port_id_2;
+        static sai_object_id_t  port_id_1;
+        static sai_object_id_t  port_id_2;
         static sai_object_id_t  bridge_port_id_invalid;
         static sai_bridge_api_t *p_sai_bridge_api_tbl;
         static sai_switch_api_t *p_sai_switch_api_tbl;
 };
-
+sai_lag_api_t* vlanTest::p_sai_lag_api_tbl = NULL;
+sai_l2mc_group_api_t* vlanTest::sai_l2mc_group_api_table= NULL;
 sai_bridge_api_t* vlanTest::p_sai_bridge_api_tbl = NULL;
 sai_switch_api_t* vlanTest::p_sai_switch_api_tbl = NULL;
 sai_vlan_api_t* vlanTest::sai_vlan_api_table = NULL;
 sai_object_id_t vlanTest ::bridge_port_id_1 = 0;
 sai_object_id_t vlanTest ::bridge_port_id_2 = 0;
+sai_object_id_t vlanTest ::port_id_1 = 0;
+sai_object_id_t vlanTest ::port_id_2 = 0;
 sai_object_id_t vlanTest ::bridge_port_id_invalid = 0;
 
 
@@ -730,4 +772,874 @@ TEST_F(vlanTest, vlan_stats)
     ASSERT_EQ(SAI_STATUS_SUCCESS,
               sai_vlan_api_table->remove_vlan(vlan_obj_id));
 
+}
+/*
+ * Apply vlan Unknown multicast flood L2MC group
+ */
+TEST_F(vlanTest, vlan_set_umc_flood_group)
+{
+    sai_attribute_t attr[SAI_GTEST_VLAN_MEMBER_ATTR_COUNT];
+    sai_object_id_t l2mc_obj_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t vlan_obj_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t l2mc_mem_obj_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t l2mc_mem_obj_id2 = SAI_NULL_OBJECT_ID;
+    sai_status_t retval = SAI_STATUS_SUCCESS;
+    uint32_t attr_count = 0;
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_VLAN_ID;
+    attr[attr_count].value.u16 = SAI_GTEST_VLAN;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->create_vlan(&vlan_obj_id,0,1,(const sai_attribute_t *)&attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_ALL;
+    retval = sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+            (const sai_attribute_t*)&attr);
+    if ((retval == SAI_STATUS_NOT_SUPPORTED) ||
+            (retval == SAI_STATUS_NOT_IMPLEMENTED)) {
+        printf("Vlan attribute , UMC flood control not supported!");
+        ASSERT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->remove_vlan(vlan_obj_id));
+        return;
+    } else {
+        attr_count = 0;
+        memset(&attr,0,sizeof(attr));
+        attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+        EXPECT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                    (sai_attribute_t*)&attr));
+        EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_ALL,attr[attr_count].value.oid);
+    }
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group(&l2mc_obj_id,0,attr_count,attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_GROUP_ID;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
+    attr[attr_count].value.oid = bridge_port_id_1;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group_member(&l2mc_mem_obj_id1,
+                                                    0,
+                                                    attr_count,
+                                                    attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_GROUP_ID;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
+    attr[attr_count].value.oid = bridge_port_id_2;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group_member(&l2mc_mem_obj_id2,
+                                                    0,
+                                                    attr_count,
+                                                    attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(l2mc_obj_id,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    attr[attr_count].value.oid = SAI_NULL_OBJECT_ID;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(SAI_NULL_OBJECT_ID,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(l2mc_obj_id,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_ALL;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_ALL,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_NONE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_NONE,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP,attr[attr_count].value.oid);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->remove_vlan(vlan_obj_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group_member(l2mc_mem_obj_id1));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group_member(l2mc_mem_obj_id2));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group(l2mc_obj_id));
+}
+/*
+ * Apply vlan Unknown multicast flood L2MC group - and modify by add/remove L2mc
+ * members
+ */
+TEST_F(vlanTest, vlan_umc_flood_group_port_update)
+{
+    sai_attribute_t attr[SAI_GTEST_VLAN_MEMBER_ATTR_COUNT];
+    sai_object_id_t l2mc_obj_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t vlan_obj_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t l2mc_mem_obj_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t l2mc_mem_obj_id2 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t vlan_mem_obj_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t vlan_mem_obj_id2 = SAI_NULL_OBJECT_ID;
+    sai_status_t retval = SAI_STATUS_SUCCESS;
+    uint32_t attr_count = 0;
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_VLAN_ID;
+    attr[attr_count].value.u16 = SAI_GTEST_VLAN;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->create_vlan(&vlan_obj_id,0,1,(const sai_attribute_t *)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_ALL;
+    retval = sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+            (const sai_attribute_t*)&attr);
+    if ((retval == SAI_STATUS_NOT_SUPPORTED) ||
+            (retval == SAI_STATUS_NOT_IMPLEMENTED)) {
+        printf("Vlan attribute , UMC flood control not supported!");
+        ASSERT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->remove_vlan(vlan_obj_id));
+        return;
+    } else {
+        attr_count = 0;
+        memset(&attr,0,sizeof(attr));
+        attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+        EXPECT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                    (sai_attribute_t*)&attr));
+        EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_ALL,attr[attr_count].value.oid);
+    }
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_VLAN_ID;
+    attr[attr_count].value.oid = vlan_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID;
+    attr[attr_count].value.oid = bridge_port_id_1;
+    attr_count++;
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE;
+    attr[attr_count].value.u32 = SAI_VLAN_TAGGING_MODE_UNTAGGED;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->create_vlan_member(&vlan_mem_obj_id1,
+                                                    0,
+                                                    attr_count,
+                                                    attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_VLAN_ID;
+    attr[attr_count].value.oid = vlan_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID;
+    attr[attr_count].value.oid = bridge_port_id_2;
+    attr_count++;
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE;
+    attr[attr_count].value.u32 = SAI_VLAN_TAGGING_MODE_UNTAGGED;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->create_vlan_member(&vlan_mem_obj_id2,
+                                                    0,
+                                                    attr_count,
+                                                    attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group(&l2mc_obj_id,0,attr_count,attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(l2mc_obj_id,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+
+    EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_GROUP_ID;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
+    attr[attr_count].value.oid = bridge_port_id_1;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group_member(&l2mc_mem_obj_id1,
+                                                    0,
+                                                    attr_count,
+                                                    attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_GROUP_ID;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
+    attr[attr_count].value.oid = bridge_port_id_2;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group_member(&l2mc_mem_obj_id2,
+                                                    0,
+                                                    attr_count,
+                                                    attr));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group_member(l2mc_mem_obj_id1));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group_member(l2mc_mem_obj_id2));
+
+    ASSERT_EQ(SAI_STATUS_OBJECT_IN_USE,
+              sai_l2mc_group_api_table->remove_l2mc_group(l2mc_obj_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->remove_vlan_member(vlan_mem_obj_id1));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->remove_vlan_member(vlan_mem_obj_id2));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->remove_vlan(vlan_obj_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group(l2mc_obj_id));
+}
+
+/*
+ * Apply vlan Unknown multicast flood L2MC group - Port-Channel members 
+ */
+TEST_F(vlanTest, vlan_umc_lag_port_in_l2mc)
+{
+    sai_attribute_t attr[SAI_GTEST_VLAN_MEMBER_ATTR_COUNT];
+    sai_object_id_t l2mc_obj_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t vlan_obj_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t l2mc_mem_obj_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t vlan_mem_obj_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t lag_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t lag_bridge_port_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t lag_member_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t lag_member_id2 = SAI_NULL_OBJECT_ID;
+    sai_status_t retval = SAI_STATUS_SUCCESS;
+    uint32_t attr_count = 0;
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_VLAN_ID;
+    attr[attr_count].value.u16 = SAI_GTEST_VLAN;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->create_vlan(&vlan_obj_id,0,1,(const sai_attribute_t *)&attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_ALL;
+    retval = sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+            (const sai_attribute_t*)&attr);
+    if ((retval == SAI_STATUS_NOT_SUPPORTED) ||
+            (retval == SAI_STATUS_NOT_IMPLEMENTED)) {
+        printf("Vlan attribute , UMC flood control not supported!");
+        ASSERT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->remove_vlan(vlan_obj_id));
+        return;
+    } else {
+        attr_count = 0;
+        memset(&attr,0,sizeof(attr));
+        attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+        EXPECT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                    (sai_attribute_t*)&attr));
+        EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_ALL,attr[attr_count].value.oid);
+    }
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_l2mc_group_api_table->create_l2mc_group(&l2mc_obj_id,0,attr_count,attr));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_bridge_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                bridge_port_id_1, true));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_bridge_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                bridge_port_id_2, true));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->create_lag(&lag_id, switch_id, 0, NULL));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_bridge_ut_create_bridge_port(p_sai_bridge_api_tbl, switch_id, lag_id,
+                true, &lag_bridge_port_id));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[0].id = SAI_LAG_MEMBER_ATTR_LAG_ID;
+    attr[0].value.oid = lag_id;
+
+    attr[1].id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+    attr[1].value.oid = port_id_1;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->create_lag_member (&lag_member_id1, switch_id, 2, attr));
+
+    attr[1].value.oid = port_id_2;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->create_lag_member (&lag_member_id2, switch_id, 2, attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_VLAN_ID;
+    attr[attr_count].value.oid = vlan_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID;
+    attr[attr_count].value.oid = lag_bridge_port_id;
+    attr_count++;
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE;
+    attr[attr_count].value.u32 = SAI_VLAN_TAGGING_MODE_UNTAGGED;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->create_vlan_member(&vlan_mem_obj_id1,
+                0,
+                attr_count,
+                attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_GROUP_ID;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
+    attr[attr_count].value.oid = lag_bridge_port_id;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_l2mc_group_api_table->create_l2mc_group_member(&l2mc_mem_obj_id1,
+                0,
+                attr_count,
+                attr));
+
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                (sai_attribute_t*)&attr));
+    EXPECT_EQ(l2mc_obj_id,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                (sai_attribute_t*)&attr));
+
+    EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP,attr[attr_count].value.oid);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->remove_vlan_member(vlan_mem_obj_id1));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->remove_lag_member(lag_member_id1));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->remove_lag_member(lag_member_id2));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_l2mc_group_api_table->remove_l2mc_group_member(l2mc_mem_obj_id1));
+
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                lag_bridge_port_id, true));
+
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_create_bridge_port(p_sai_bridge_api_tbl, switch_id,
+            port_id_1, true, &bridge_port_id_1));
+
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_create_bridge_port(p_sai_bridge_api_tbl, switch_id,
+            port_id_2, true, &bridge_port_id_2));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->remove_lag(lag_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->remove_vlan(vlan_obj_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_l2mc_group_api_table->remove_l2mc_group(l2mc_obj_id));
+}
+/*
+ * Apply vlan Unknown multicast flood L2MC group - 
+ * Add/remove port-channel members within L2MC group.
+ */
+TEST_F(vlanTest, vlan_umc_flood_lag_port_update)
+{
+    sai_attribute_t attr[SAI_GTEST_VLAN_MEMBER_ATTR_COUNT];
+    sai_object_id_t l2mc_obj_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t vlan_obj_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t l2mc_mem_obj_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t vlan_mem_obj_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t lag_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t lag_bridge_port_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t lag_member_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t lag_member_id2 = SAI_NULL_OBJECT_ID;
+    sai_status_t retval = SAI_STATUS_SUCCESS;
+    uint32_t attr_count = 0;
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_VLAN_ID;
+    attr[attr_count].value.u16 = SAI_GTEST_VLAN;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->create_vlan(&vlan_obj_id,0,1,(const sai_attribute_t *)&attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_ALL;
+    retval = sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+            (const sai_attribute_t*)&attr);
+    if ((retval == SAI_STATUS_NOT_SUPPORTED) ||
+            (retval == SAI_STATUS_NOT_IMPLEMENTED)) {
+        printf("Vlan attribute , UMC flood control not supported!");
+        ASSERT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->remove_vlan(vlan_obj_id));
+        return;
+    } else {
+        attr_count = 0;
+        memset(&attr,0,sizeof(attr));
+        attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+        EXPECT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                    (sai_attribute_t*)&attr));
+        EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_ALL,attr[attr_count].value.oid);
+    }
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_l2mc_group_api_table->create_l2mc_group(&l2mc_obj_id,0,attr_count,attr));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_bridge_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                bridge_port_id_1, true));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_bridge_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                bridge_port_id_2, true));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->create_lag(&lag_id, switch_id, 0, NULL));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_bridge_ut_create_bridge_port(p_sai_bridge_api_tbl, switch_id, lag_id,
+                true, &lag_bridge_port_id));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_VLAN_ID;
+    attr[attr_count].value.oid = vlan_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID;
+    attr[attr_count].value.oid = lag_bridge_port_id;
+    attr_count++;
+    attr[attr_count].id = SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE;
+    attr[attr_count].value.u32 = SAI_VLAN_TAGGING_MODE_UNTAGGED;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->create_vlan_member(&vlan_mem_obj_id1,
+                0,
+                attr_count,
+                attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_GROUP_ID;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    attr_count++;
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
+    attr[attr_count].value.oid = lag_bridge_port_id;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_l2mc_group_api_table->create_l2mc_group_member(&l2mc_mem_obj_id1,
+                0,
+                attr_count,
+                attr));
+
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    attr[attr_count].value.oid = l2mc_obj_id;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                (sai_attribute_t*)&attr));
+    EXPECT_EQ(l2mc_obj_id,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                (sai_attribute_t*)&attr));
+
+    EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+
+    attr[0].id = SAI_LAG_MEMBER_ATTR_LAG_ID;
+    attr[0].value.oid = lag_id;
+
+    attr[1].id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+    attr[1].value.oid = port_id_1;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->create_lag_member (&lag_member_id1, switch_id, 2, attr));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->remove_lag_member(lag_member_id1));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+
+    attr[0].id = SAI_LAG_MEMBER_ATTR_LAG_ID;
+    attr[0].value.oid = lag_id;
+
+    attr[1].id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+    attr[1].value.oid = port_id_2;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->create_lag_member (&lag_member_id2, switch_id, 2, attr));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->remove_lag_member(lag_member_id2));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->remove_vlan_member(vlan_mem_obj_id1));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_l2mc_group_api_table->remove_l2mc_group_member(l2mc_mem_obj_id1));
+
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_remove_bridge_port(p_sai_bridge_api_tbl, switch_id,
+                lag_bridge_port_id, true));
+
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_create_bridge_port(p_sai_bridge_api_tbl, switch_id,
+            port_id_1, true, &bridge_port_id_1));
+
+    EXPECT_EQ(SAI_STATUS_SUCCESS, sai_bridge_ut_create_bridge_port(p_sai_bridge_api_tbl, switch_id,
+            port_id_2, true, &bridge_port_id_2));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            p_sai_lag_api_tbl->remove_lag(lag_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_vlan_api_table->remove_vlan(vlan_obj_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+            sai_l2mc_group_api_table->remove_l2mc_group(l2mc_obj_id));
+}
+/*
+ * Modification of L2MC group assocoated with vlan
+ */
+TEST_F(vlanTest, vlan_modify_umc_flood_group)
+{
+    sai_attribute_t attr[SAI_GTEST_VLAN_MEMBER_ATTR_COUNT];
+    sai_object_id_t l2mc_obj_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t l2mc_obj_id2 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t vlan_obj_id = SAI_NULL_OBJECT_ID;
+    sai_object_id_t l2mc_mem_obj_id1 = SAI_NULL_OBJECT_ID;
+    sai_object_id_t l2mc_mem_obj_id2 = SAI_NULL_OBJECT_ID;
+    sai_status_t retval = SAI_STATUS_SUCCESS;
+    uint32_t attr_count = 0;
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_VLAN_ID;
+    attr[attr_count].value.u16 = SAI_GTEST_VLAN;
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->create_vlan(&vlan_obj_id,0,1,(const sai_attribute_t *)&attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_ALL;
+    retval = sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+            (const sai_attribute_t*)&attr);
+    if ((retval == SAI_STATUS_NOT_SUPPORTED) ||
+            (retval == SAI_STATUS_NOT_IMPLEMENTED)) {
+        printf("Vlan attribute , UMC flood control not supported!");
+        ASSERT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->remove_vlan(vlan_obj_id));
+        return;
+    } else {
+        attr_count = 0;
+        memset(&attr,0,sizeof(attr));
+        attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+        EXPECT_EQ(SAI_STATUS_SUCCESS,
+                sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                    (sai_attribute_t*)&attr));
+        EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_ALL,attr[attr_count].value.oid);
+    }
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group(&l2mc_obj_id1,0,attr_count,attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_GROUP_ID;
+    attr[attr_count].value.oid = l2mc_obj_id1;
+    attr_count++;
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
+    attr[attr_count].value.oid = bridge_port_id_1;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group_member(&l2mc_mem_obj_id1,
+                                                    0,
+                                                    attr_count,
+                                                    attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group(&l2mc_obj_id2,0,attr_count,attr));
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_GROUP_ID;
+    attr[attr_count].value.oid = l2mc_obj_id2;
+    attr_count++;
+    attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
+    attr[attr_count].value.oid = bridge_port_id_2;
+    attr_count++;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->create_l2mc_group_member(&l2mc_mem_obj_id2,
+                                                    0,
+                                                    attr_count,
+                                                    attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    attr[attr_count].value.oid = l2mc_obj_id1;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    attr[attr_count].value.s32 = SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(l2mc_obj_id1,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(SAI_VLAN_FLOOD_CONTROL_TYPE_L2MC_GROUP,attr[attr_count].value.oid);
+
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    attr[attr_count].value.oid = l2mc_obj_id2;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->set_vlan_attribute(vlan_obj_id,
+                                                   (const sai_attribute_t*)&attr));
+    attr_count = 0;
+    memset(&attr,0,sizeof(attr));
+    attr[attr_count].id = SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_GROUP;
+    EXPECT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->get_vlan_attribute(vlan_obj_id,1,
+                                                   (sai_attribute_t*)&attr));
+    EXPECT_EQ(l2mc_obj_id2,attr[attr_count].value.oid);
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->remove_vlan(vlan_obj_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group_member(l2mc_mem_obj_id1));
+
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group(l2mc_obj_id1));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group_member(l2mc_mem_obj_id2));
+
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_l2mc_group_api_table->remove_l2mc_group(l2mc_obj_id2));
 }

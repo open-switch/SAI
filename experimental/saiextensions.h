@@ -32,6 +32,10 @@
 #include "saiswitchextensions.h"
 #include "saiaclextensions.h"
 #include "saiextensionaclslice.h"
+#include "sailagextensions.h"
+#include "sainexthopgroupextensions.h"
+#include "saihostifextensions.h"
+
 /* new experimental object type includes */
 
 /**
@@ -41,11 +45,12 @@
  */
 typedef enum _sai_api_extensions_t
 {
-    SAI_API_EXTENSIONS_RANGE_START = SAI_API_MAX,
+    SAI_API_EXTENSIONS_RANGE_START = SAI_API_CUSTOM_RANGE_END,
 
     /* Add new experimental APIs above this line */
+    SAI_API_EXTENSIONS_IPMC_REPL_GROUP, /**< sai_ipmc_repl_group_api_t */
 
-    SAI_API_EXTENSIONS_RANGE_START_END
+    SAI_API_EXTENSIONS_RANGE_END
 
 } sai_api_extensions_t;
 

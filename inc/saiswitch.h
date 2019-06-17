@@ -190,6 +190,18 @@ typedef enum _sai_hash_algorithm_t
     /** Combination of CRC and XOR based hash algorithm */
     SAI_HASH_ALGORITHM_CRC_XOR = 6,
 
+    /** Upper 8 bits of CRC16-BISYNC and lower 8 bits of xor1 */
+    SAI_HASH_ALGORITHM_CRC_XOR4 = 7,
+
+    /** Upper 8 bits of CRC16-BISYNC and lower 8 bits of xor2 */
+    SAI_HASH_ALGORITHM_CRC_XOR2 = 8,
+
+    /** Upper 8 bits of CRC16-BISYNC and lower 8 bits of xor4 */
+    SAI_HASH_ALGORITHM_CRC_XOR1 = 9,
+
+    /** Combination of CRC and XOR based hash algorithm.same as XOR */
+    SAI_HASH_ALGORITHM_CRC_XOR8 = 10,
+
 } sai_hash_algorithm_t;
 
 /**
@@ -1681,6 +1693,33 @@ typedef enum _sai_switch_attr_t
  */
 #define SAI_KEY_L3_ROUTE_EXTENDED_PREFIX_ENTRIES  "SAI_KEY_L3_ROUTE_EXTENDED_PREFIX_ENTRIES"
 
+/**
+ * @def SAI_KEY_VXLAN_SCALED_MODE_ENABLE
+ * Enable/Disable VXLAN scaled mode. By default scaled mode is enabled
+ */
+#define SAI_KEY_VXLAN_SCALED_MODE_ENABLE          "SAI_KEY_VXLAN_SCALED_MODE_ENABLE"
+
+/**
+ * @def SAI_KEY_VXLAN_RIOT_ENABLE
+ * Enable/Disable VXLAN Routing In and Out of Tunnel(RIOT).
+ */
+#define SAI_KEY_VXLAN_RIOT_ENABLE                 "SAI_KEY_VXLAN_RIOT_ENABLE"
+
+/**
+ * @def SAI_KEY_VXLAN_NUM_OVERLAY_NEXT_HOPS
+ * Number of overlay nexthops which need to be reserved during init.
+ * The number of overlay nexthops should be in blocks of 4K.
+ * Example: 0,4096,8192 and so on upto 48K.
+ */
+#define SAI_KEY_VXLAN_NUM_OVERLAY_NEXT_HOPS       "SAI_KEY_VXLAN_NUM_OVERLAY_NEXT_HOPS"
+
+/**
+ * @def SAI_KEY_VXLAN_NUM_OVERLAY_RIFS
+ * Number of overlay router interfaces which need to be reserved during init.
+ * The number of overlay router interfaces should be in blocks of 2K.
+ * Example: 0,2048,4096 and so on upto 12K.
+ */
+#define SAI_KEY_VXLAN_NUM_OVERLAY_RIFS            "SAI_KEY_VXLAN_NUM_OVERLAY_RIFS"
 
 /**
  * @brief Switch shutdown request callback.

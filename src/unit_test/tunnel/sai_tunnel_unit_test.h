@@ -20,6 +20,7 @@
 #define __SAI_TUNNEL_UNIT_TEST_H__
 
 #include "gtest/gtest.h"
+#include <map>
 
 extern "C" {
 #include "saitypes.h"
@@ -31,6 +32,9 @@ extern "C" {
 #include "sailag.h"
 #include <stdarg.h>
 }
+
+typedef std::map<std::string, std::string> sai_kv_pair_t;
+typedef std::map<std::string, std::string>::iterator kv_iter;
 
 class saiTunnelTest : public ::testing::Test
 {
@@ -212,6 +216,7 @@ class saiTunnelTest : public ::testing::Test
         /*Util for converting mac string to byte representation*/
         static void sai_test_mac_str_to_bytes_get (const char *p_mac_str, uint8_t *mac);
 
+
         /* Util for converting to attribute index based status code */
         static inline sai_status_t sai_test_invalid_attr_status_code (
                                                        sai_status_t status,
@@ -254,6 +259,12 @@ class saiTunnelTest : public ::testing::Test
             return p_sai_lag_api_tbl;
         }
 
+        static inline sai_hostif_api_t* hostif_tbl_get(void)
+        {
+            return p_sai_hostif_api_tbl;
+        }
+
+        static sai_status_t sai_test_flood_packet_on_vxlan_l3mc_index(sai_object_id_t bridgeId, sai_object_id_t l2mcGroup);
     protected:
         static void SetUpTestCase (void);
         static void TearDownTestCase (void);
@@ -300,6 +311,7 @@ class saiTunnelTest : public ::testing::Test
         static sai_fdb_api_t        *p_sai_fdb_api_tbl;
         static sai_l2mc_group_api_t *p_sai_l2mc_group_api_tbl;
         static sai_lag_api_t        *p_sai_lag_api_tbl;
+        static sai_hostif_api_t     *p_sai_hostif_api_tbl;
         static unsigned int          port_count;
         static sai_object_id_t       port_list[SAI_TEST_MAX_PORTS];
         static unsigned int          bridge_port_count;
@@ -307,4 +319,5 @@ class saiTunnelTest : public ::testing::Test
         static sai_object_id_t       default_bridge_id;
 };
 
+sai_kv_pair_t kvpair_get(void);
 #endif /* __SAI_TUNNEL_UNIT_TEST_H__ */

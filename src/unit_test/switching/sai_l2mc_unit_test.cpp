@@ -10,10 +10,11 @@
  */
 
 #include "gtest/gtest.h"
-
+#include "sai_bridge_unit_test_utils.h"
 extern "C" {
 #include "sai.h"
 #include "saivlan.h"
+#include "saibridge.h"
 #include "saitypes.h"
 #include "sai_l2_unit_test_defs.h"
 #include <arpa/inet.h>
@@ -78,6 +79,9 @@ class l2mcInit : public ::testing::Test
             EXPECT_EQ (SAI_STATUS_SUCCESS,
                     (p_sai_switch_api_tbl->create_switch (&switch_id , attr_count,
                                                           sai_attr_set)));
+            ASSERT_EQ(NULL,sai_api_query(SAI_API_BRIDGE,
+                        (static_cast<void**>(static_cast<void*>(&p_sai_bridge_api_tbl)))));
+            ASSERT_TRUE (p_sai_bridge_api_tbl != NULL);
 
             ASSERT_EQ(NULL,sai_api_query(SAI_API_VLAN,
                         (static_cast<void**>(static_cast<void*>(&sai_vlan_api_table)))));
@@ -119,11 +123,21 @@ class l2mcInit : public ::testing::Test
             port_id_1 = port_list[0];
             port_id_2 = port_list[port_count-1];
             port_id_invalid = port_id_2 + 1;
+
+            EXPECT_EQ(SAI_STATUS_SUCCESS,
+                    sai_bridge_ut_get_bridge_port_from_port(p_sai_switch_api_tbl, p_sai_bridge_api_tbl,
+                        0, port_id_1, &bridge_port_id_1));
+            EXPECT_EQ(SAI_STATUS_SUCCESS,
+                    sai_bridge_ut_get_bridge_port_from_port(p_sai_switch_api_tbl, p_sai_bridge_api_tbl,
+                        0, port_id_2, &bridge_port_id_2));
         }
 
         static sai_l2mc_group_api_t* sai_l2mc_group_api_table;
-        static sai_l2mc_api_t* sai_l2mc_api_table;
-        static sai_vlan_api_t* sai_vlan_api_table;
+        static sai_l2mc_api_t*  sai_l2mc_api_table;
+        static sai_vlan_api_t*  sai_vlan_api_table;
+        static sai_bridge_api_t *p_sai_bridge_api_tbl;
+        static sai_object_id_t  bridge_port_id_1;
+        static sai_object_id_t  bridge_port_id_2;
         static sai_object_id_t  port_id_1;
         static sai_object_id_t  port_id_2;
         static sai_object_id_t  port_id_invalid;
@@ -141,8 +155,12 @@ class l2mcInit : public ::testing::Test
 sai_l2mc_group_api_t* l2mcInit ::sai_l2mc_group_api_table = NULL;
 sai_l2mc_api_t* l2mcInit ::sai_l2mc_api_table = NULL;
 sai_vlan_api_t* l2mcInit ::sai_vlan_api_table = NULL;
+sai_bridge_api_t* l2mcInit ::p_sai_bridge_api_tbl= NULL;
+sai_object_id_t l2mcInit ::bridge_port_id_1 = 0;
+sai_object_id_t l2mcInit ::bridge_port_id_2 = 0;
 sai_object_id_t l2mcInit ::port_id_1 = 0;
 sai_object_id_t l2mcInit ::port_id_2 = 0;
+
 sai_object_id_t l2mcInit ::port_id_invalid = 0;
 
 /*
@@ -187,7 +205,7 @@ TEST_F(l2mcInit, l2mc_group_port_test)
     attr[attr_count].value.oid = l2mc_obj_id;
     attr_count++;
     attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
-    attr[attr_count].value.oid = port_id_1;
+    attr[attr_count].value.oid = bridge_port_id_1;
     attr_count++;
 
     ASSERT_EQ(SAI_STATUS_SUCCESS,
@@ -202,7 +220,7 @@ TEST_F(l2mcInit, l2mc_group_port_test)
     attr[attr_count].value.oid = l2mc_obj_id;
     attr_count++;
     attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
-    attr[attr_count].value.oid = port_id_2;
+    attr[attr_count].value.oid = bridge_port_id_2;
     attr_count++;
 
     ASSERT_EQ(SAI_STATUS_SUCCESS,
@@ -234,7 +252,7 @@ TEST_F(l2mcInit, l2mc_group_port_test)
             sai_l2mc_group_api_table->get_l2mc_group_member_attribute(l2mc_mem_obj_id1,
                                                     attr_count,
                                                     attr));
-    ASSERT_EQ(attr[0].value.oid,port_id_1);
+    ASSERT_EQ(attr[0].value.oid,bridge_port_id_1);
 
     attr_count = 0;
     memset(&attr,0,sizeof(attr));
@@ -245,7 +263,7 @@ TEST_F(l2mcInit, l2mc_group_port_test)
             sai_l2mc_group_api_table->get_l2mc_group_member_attribute(l2mc_mem_obj_id2,
                                                     attr_count,
                                                     attr));
-    ASSERT_EQ(attr[0].value.oid,port_id_2);
+    ASSERT_EQ(attr[0].value.oid,bridge_port_id_2);
 
     attr_count = 0;
     memset(&attr,0,sizeof(attr));
@@ -253,7 +271,7 @@ TEST_F(l2mcInit, l2mc_group_port_test)
     attr[attr_count].value.oid = l2mc_obj_id;
     attr_count++;
     attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
-    attr[attr_count].value.oid = port_id_1;
+    attr[attr_count].value.oid = bridge_port_id_1;
     attr_count++;
 
     ASSERT_EQ(SAI_STATUS_ITEM_ALREADY_EXISTS,
@@ -267,7 +285,7 @@ TEST_F(l2mcInit, l2mc_group_port_test)
     attr[attr_count].value.oid = l2mc_obj_id;
     attr_count++;
     attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
-    attr[attr_count].value.oid = port_id_2;
+    attr[attr_count].value.oid = bridge_port_id_2;
     attr_count++;
 
     ASSERT_EQ(SAI_STATUS_ITEM_ALREADY_EXISTS,
@@ -294,7 +312,7 @@ TEST_F(l2mcInit, l2mc_group_port_test)
     attr[attr_count].value.oid = l2mc_obj_id;
     attr_count++;
     attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
-    attr[attr_count].value.oid = port_id_1;
+    attr[attr_count].value.oid = bridge_port_id_1;
     attr_count++;
 
     ASSERT_EQ(SAI_STATUS_SUCCESS,
@@ -424,7 +442,7 @@ TEST_F(l2mcInit, l2mc_entry_add_and_remove)
     attr[attr_count].value.oid = l2mc_obj_id;
     attr_count++;
     attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
-    attr[attr_count].value.oid = port_id_1;
+    attr[attr_count].value.oid = bridge_port_id_1;
     attr_count++;
 
     ASSERT_EQ(SAI_STATUS_SUCCESS,
@@ -439,7 +457,7 @@ TEST_F(l2mcInit, l2mc_entry_add_and_remove)
     attr[attr_count].value.oid = l2mc_obj_id;
     attr_count++;
     attr[attr_count].id = SAI_L2MC_GROUP_MEMBER_ATTR_L2MC_OUTPUT_ID;
-    attr[attr_count].value.oid = port_id_2;
+    attr[attr_count].value.oid = bridge_port_id_2;
     attr_count++;
 
     ASSERT_EQ(SAI_STATUS_SUCCESS,
@@ -468,4 +486,7 @@ TEST_F(l2mcInit, l2mc_entry_add_and_remove)
 
     ASSERT_EQ(SAI_STATUS_SUCCESS,
               sai_l2mc_group_api_table->remove_l2mc_group(l2mc_obj_id));
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,
+              sai_vlan_api_table->remove_vlan(vlan_obj_id));
 }

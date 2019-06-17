@@ -53,8 +53,72 @@ typedef enum _sai_acl_table_attr_extensions_t
      */
     SAI_ACL_TABLE_ATTR_EXTENSIONS_AVAILABLE_ACL_ENTRY_LIST,
 
+    /**
+     * @brief Layer 3 Interface Lookup Meta Data.
+     *
+     * @type bool
+     * @flags CREATE_ONLY
+     * @default false
+     */
+    SAI_ACL_TABLE_ATTR_EXTENSIONS_FIELD_LAYER3_INTERFACE_USER_META,
+
+    /**
+     * @brief Lookup match in Multicast Route table
+     *
+     * @type bool
+     * @flags CREATE_ONLY
+     * @default false
+     */
+    SAI_ACL_TABLE_ATTR_EXTENSIONS_FIELD_MCAST_ROUTE_NPU_META_DST_HIT,
+
     SAI_ACL_TABLE_ATTR_EXTENSIONS_RANGE_END
 
 } sai_acl_table_attr_extensions_t;
+
+/**
+ * @brief Attribute data for Layer 3 Interface User Meta Data
+ */
+typedef enum _sai_acl_layer3_intf_protocol_class_t
+{
+    /** Layer3 Interface Protocol class None*/
+    SAI_ACL_LAYER3_INTERFACE_PRTCL_CLASS_NONE,
+
+    /** Layer3 Interface IPv4 PIMv2 Protocol class */
+    SAI_ACL_LAYER3_INTERFACE_IPV4_PIMV2_PRTCL_CLASS,
+
+    /** Layer3 Interface IPv6 PIMv2 Protocol class */
+    SAI_ACL_LAYER3_INTERFACE_IPV6_PIMV2_PRTCL_CLASS
+
+} sai_acl_layer3_intf_protocol_class_t;
+
+/**
+ * @brief Attribute Id extensions for sai_acl_entry
+ *
+ * @flags Contains flags
+ */
+typedef enum _sai_acl_entry_attr_extensions_t
+{
+    SAI_ACL_ENTRY_ATTR_EXTENSIONS_RANGE_START = SAI_ACL_ENTRY_ATTR_CUSTOM_RANGE_END,
+    /**
+     * @brief Layer 3 Interface Lookup Meta Data - Vendor extension.
+     *
+     * @type sai_acl_field_data_t sai_acl_layer3_intf_protocol_class_t
+     * @flags CREATE_AND_SET
+     * @default disabled
+     */
+    SAI_ACL_ENTRY_ATTR_EXTENSIONS_FIELD_LAYER3_INTERFACE_USER_META=SAI_ACL_ENTRY_ATTR_EXTENSIONS_RANGE_START,
+
+    /**
+     * @brief Lookup match in Multicast Route table - Vendor extension
+     *
+     * @type sai_acl_field_data_t bool
+     * @flags CREATE_AND_SET
+     * @default disabled
+     */
+    SAI_ACL_ENTRY_ATTR_EXTENSIONS_FIELD_MCAST_ROUTE_NPU_META_DST_HIT,
+
+    SAI_ACL_ENTRY_ATTR_EXTENSIONS_RANGE_END
+
+} sai_acl_entry_attr_extensions_t;
 
 #endif /** __SAIACLEXTENSIONS_H_ */

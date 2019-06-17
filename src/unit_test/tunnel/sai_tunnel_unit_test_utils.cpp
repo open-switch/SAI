@@ -20,6 +20,7 @@
 
 #include "sai_tunnel_unit_test.h"
 #include "sai_l3_unit_test_utils.h"
+#include <map>
 
 extern "C" {
 #include "sai.h"
@@ -28,6 +29,7 @@ extern "C" {
 #include "saiswitch.h"
 #include "saitunnel.h"
 #include "saibridge.h"
+#include "saihostifextensions.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -43,6 +45,7 @@ sai_tunnel_api_t* saiTunnelTest::p_sai_tunnel_api_tbl = NULL;
 sai_bridge_api_t* saiTunnelTest::p_sai_bridge_api_tbl = NULL;
 sai_fdb_api_t*    saiTunnelTest::p_sai_fdb_api_tbl = NULL;
 sai_l2mc_group_api_t* saiTunnelTest::p_sai_l2mc_group_api_tbl = NULL;
+sai_hostif_api_t*     saiTunnelTest::p_sai_hostif_api_tbl = NULL;
 sai_lag_api_t*    saiTunnelTest::p_sai_lag_api_tbl = NULL;
 sai_object_id_t saiTunnelTest::test_vlan_obj_id = SAI_NULL_OBJECT_ID;
 sai_object_id_t saiTunnelTest::dflt_vr_id = SAI_NULL_OBJECT_ID;
@@ -62,6 +65,7 @@ unsigned int saiTunnelTest::bridge_port_count = 0;
 sai_object_id_t saiTunnelTest::bridge_port_list[SAI_TEST_MAX_PORTS] = {0};
 sai_object_id_t saiTunnelTest::default_bridge_id = 0;
 static sai_object_id_t switch_id = 0;
+static sai_kv_pair_t kvpair;
 
 #define TUNNEL_PRINT(msg, ...) \
     printf(msg"\n", ##__VA_ARGS__)
@@ -112,11 +116,82 @@ static inline void sai_switch_shutdown_callback (void)
 {
 }
 
+const char* profile_get_value(sai_switch_profile_id_t profile_id,
+                              const char* variable)
+{
+    kv_iter kviter;
+    std::string key;
+
+    if (variable ==  NULL)
+        return NULL;
+
+    key = variable;
+
+    kviter = kvpair.find(key);
+    if (kviter == kvpair.end()) {
+        return NULL;
+    }
+    return kviter->second.c_str();
+}
+
+int profile_get_next_value(sai_switch_profile_id_t profile_id,
+                           const char** variable,
+                           const char** value)
+{
+    kv_iter kviter;
+    std::string key;
+
+    if (variable == NULL || value == NULL) {
+        return -1;
+    }
+    if (*variable == NULL) {
+            if (kvpair.size() < 1) {
+            return -1;
+        }
+        kviter = kvpair.begin();
+    } else {
+        key = *variable;
+        kviter = kvpair.find(key);
+        if (kviter == kvpair.end()) {
+            return -1;
+        }
+        kviter++;
+        if (kviter == kvpair.end()) {
+            return -1;
+        }
+    }
+    *variable = (char *)kviter->first.c_str();
+    *value = (char *)kviter->second.c_str();
+    return 0;
+}
+
+void kv_populate(void)
+{
+    kvpair["SAI_KEY_VXLAN_RIOT_ENABLE"] = "1";
+    kvpair["SAI_KEY_VXLAN_NUM_OVERLAY_NEXT_HOPS"] = "8192";
+    kvpair["SAI_KEY_VXLAN_NUM_OVERLAY_RIFS"] = "4096";
+    kvpair["SAI_KEY_VXLAN_OVERLAY_ECMP_ENABLE"] = "1";
+}
+
+sai_kv_pair_t kvpair_get(void)
+{
+    return kvpair;
+}
+
 /* SAI switch initialization */
 void saiTunnelTest::SetUpTestCase (void)
 {
     sai_status_t              status;
     sai_attribute_t attr;
+    uint8_t  sai_mac [6] = {0x00,0x00,0x00,0xaa,0xbb,0xcc};
+
+    sai_service_method_table_t  sai_service_method_table;
+    kv_populate();
+
+    sai_service_method_table.profile_get_value = profile_get_value;
+    sai_service_method_table.profile_get_next_value = profile_get_next_value;
+
+    ASSERT_EQ(SAI_STATUS_SUCCESS,sai_api_initialize(0, &sai_service_method_table));
 
 
     /*
@@ -133,6 +208,12 @@ void saiTunnelTest::SetUpTestCase (void)
                               (static_cast<void*>(&p_sai_bridge_api_tbl)))));
 
     ASSERT_TRUE (p_sai_bridge_api_tbl != NULL);
+
+    ASSERT_EQ(NULL,sai_api_query(SAI_API_HOSTIF,
+           (static_cast<void**>(static_cast<void*>(&p_sai_hostif_api_tbl)))));
+    ASSERT_TRUE(p_sai_hostif_api_tbl != NULL);
+
+    EXPECT_TRUE(p_sai_hostif_api_tbl->send_hostif_packet !=NULL);
 
     /*
      * Switch Initialization.
@@ -186,6 +267,15 @@ void saiTunnelTest::SetUpTestCase (void)
     /* Query the L3 API method table */
     saiL3Test::SetUpL3ApiQuery ();
 
+    /* Setup router mac*/
+    attr.id = SAI_SWITCH_ATTR_SRC_MAC_ADDRESS;
+
+    memcpy (attr.value.mac, sai_mac, sizeof (sai_mac_t));
+    status = p_sai_switch_api_tbl->set_switch_attribute
+            (switch_id,(const sai_attribute_t *)&attr);
+
+    ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
     /* Set up the default VLAN OBJ ID for L3 API */
     {
         sai_attribute_t attr;
@@ -218,6 +308,16 @@ void saiTunnelTest::SetUpTestCase (void)
 
     port_count = attr.value.objlist.count;
 
+    uint32_t port_idx = 0;
+    for(port_idx = 0; port_idx < port_count; port_idx++) {
+
+        attr.id = SAI_PORT_ATTR_ADMIN_STATE;
+        attr.value.booldata = true;
+        status = p_sai_port_api_tbl->set_port_attribute(port_list[port_idx],
+                                                        &attr);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    }
+
     attr.id = SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID;
 
     status = p_sai_switch_api_tbl->get_switch_attribute(switch_id,1,&attr);
@@ -237,6 +337,36 @@ void saiTunnelTest::SetUpTestCase (void)
     TUNNEL_PRINT ("Bridge port count is %u.", bridge_port_count);
 
     ASSERT_TRUE (port_count != 0);
+
+    uint32_t bridge_port_idx = 0;
+
+    for(bridge_port_idx = 0; bridge_port_idx < bridge_port_count; bridge_port_idx++) {
+
+        attr.id =  SAI_BRIDGE_PORT_ATTR_INGRESS_FILTERING;
+        attr.value.booldata = true;
+
+        status = p_sai_bridge_api_tbl->set_bridge_port_attribute(
+                                          bridge_port_list[bridge_port_idx],
+                                          &attr);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+        attr.id =  SAI_BRIDGE_PORT_ATTR_EGRESS_FILTERING;
+        attr.value.booldata = true;
+
+        status = p_sai_bridge_api_tbl->set_bridge_port_attribute(
+                                          bridge_port_list[bridge_port_idx],
+                                          &attr);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+
+        attr.id =  SAI_BRIDGE_PORT_ATTR_ADMIN_STATE;
+        attr.value.booldata = true;
+
+        status = p_sai_bridge_api_tbl->set_bridge_port_attribute(
+                                          bridge_port_list[bridge_port_idx],
+                                          &attr);
+        ASSERT_EQ (SAI_STATUS_SUCCESS, status);
+    }
+
 
     /* Setup Default Underlay Router objects */
     sai_test_tunnel_underlay_router_setup ();
@@ -1609,9 +1739,11 @@ sai_status_t saiTunnelTest::sai_test_tunnel_fdb_entry_create(sai_fdb_entry_type_
     attr_list[attr_count].value.s32 = type;
     attr_count++;
 
-    attr_list[attr_count].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
-    attr_list[attr_count].value.oid = bridge_port_id;
-    attr_count++;
+    if(bridge_port_id != SAI_NULL_OBJECT_ID) {
+        attr_list[attr_count].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
+        attr_list[attr_count].value.oid = bridge_port_id;
+        attr_count++;
+    }
 
     attr_list[attr_count].id = SAI_FDB_ENTRY_ATTR_PACKET_ACTION;
     attr_list[attr_count].value.s32 = packet_action;
@@ -1904,6 +2036,32 @@ sai_status_t saiTunnelTest::sai_test_tunnel_lag_member_remove(sai_object_id_t la
         TUNNEL_PRINT ("SAI LAG member 0x%" PRIx64 " removed successfully", lag_member);
     }
 
+    return status;
+}
+
+sai_status_t saiTunnelTest::sai_test_flood_packet_on_vxlan_l3mc_index(sai_object_id_t bridgeId, sai_object_id_t l2mcIndex)
+{
+    sai_attribute_t sai_attr[3];
+    sai_status_t status;
+
+    unsigned char buffer[] =
+       {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0xe8, 0x03, 0x04, 0x07,
+        0x08, 0x06, 0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x01, 0x00, 0x01,
+        0x02, 0x03, 0x04, 0x07, 0x14, 0x00, 0x00, 0x2e, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x14, 0x00, 0x00, 0x01, 0x10, 0x02, 0x17, 0x01, 0x7f, 0x0a,
+        0x0a, 0x0a, 0x00, 0x00, 0x00, 0x85, 0xc8, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+    sai_attr[0].id = SAI_HOSTIF_PACKET_ATTR_HOSTIF_TX_TYPE;
+    sai_attr[0].value.s32 = SAI_HOSTIF_TX_TYPE_HYBRID;
+
+    sai_attr[1].id = SAI_HOSTIF_PACKET_ATTR_EGR_BRIDGE_ID;
+    sai_attr[1].value.s64 = bridgeId;
+
+    sai_attr[2].id = SAI_HOSTIF_PACKET_ATTR_EGR_L2MC_GROUP;
+    sai_attr[2].value.s64 = l2mcIndex;
+
+    status = p_sai_hostif_api_tbl->send_hostif_packet(SAI_NULL_OBJECT_ID, buffer,
+                            sizeof(buffer), 3, sai_attr);
     return status;
 }
 

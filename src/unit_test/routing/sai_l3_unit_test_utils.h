@@ -277,6 +277,10 @@ class saiL3Test : public ::testing::Test
 
         static sai_status_t sai_test_l3_remove_bridge_port(sai_object_id_t bridge_port_id);
 
+        static void sai_test_l3_switch_attributes_get(void);
+
+        static uint32_t sai_test_fdb_switch_attributes_get(void);
+
         static sai_next_hop_group_api_t   *p_sai_nh_grp_api_tbl;
         static sai_object_id_t switch_id;
         static const unsigned int default_rif_attr_count      = 3;

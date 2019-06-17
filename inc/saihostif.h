@@ -994,7 +994,10 @@ typedef enum _sai_hostif_tx_type_t
     SAI_HOSTIF_TX_TYPE_PIPELINE_LOOKUP,
 
     /** Custom range base */
-    SAI_HOSTIF_TX_TYPE_CUSTOM_RANGE_BASE = 0x10000000
+    SAI_HOSTIF_TX_TYPE_CUSTOM_RANGE_BASE = 0x10000000,
+
+    /** Custom range end */
+    SAI_HOSTIF_TX_TYPE_CUSTOM_RANGE_END
 
 } sai_hostif_tx_type_t;
 

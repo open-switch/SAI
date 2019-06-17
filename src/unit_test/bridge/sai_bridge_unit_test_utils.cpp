@@ -340,6 +340,7 @@ sai_status_t sai_bridge_ut_remove_bridge_port(sai_bridge_api_t * p_sai_bridge_ap
                                               bool def_vlan_remove)
 {
     sai_status_t sai_rc;
+    sai_attribute_t attr = {0};
     if(def_vlan_remove) {
         sai_rc = sai_bridge_ut_remove_bridge_port_from_def_vlan(switch_id, bridge_port_id);
         if(sai_rc != SAI_STATUS_SUCCESS) {
@@ -349,6 +350,18 @@ sai_status_t sai_bridge_ut_remove_bridge_port(sai_bridge_api_t * p_sai_bridge_ap
     sai_rc = sai_bridge_ut_remove_bridge_port_from_def_stp(switch_id, bridge_port_id);
     if(sai_rc != SAI_STATUS_SUCCESS) {
         printf("Error %d in removing bridge port 0x%" PRIx64 " from def stp\r\n", sai_rc, bridge_port_id);
+    }
+
+    attr.id =  SAI_BRIDGE_PORT_ATTR_ADMIN_STATE;
+    attr.value.booldata = false;
+
+    sai_rc = p_sai_bridge_api_tbl->set_bridge_port_attribute(bridge_port_id, &attr);
+    if(sai_rc != SAI_STATUS_SUCCESS) {
+        if(def_vlan_remove) {
+            sai_bridge_ut_add_bridge_port_to_def_vlan(switch_id, bridge_port_id);
+        }
+        sai_bridge_ut_add_bridge_port_to_def_stp(switch_id, bridge_port_id);
+        return sai_rc;
     }
 
     sai_rc = p_sai_bridge_api_tbl->remove_bridge_port(bridge_port_id);

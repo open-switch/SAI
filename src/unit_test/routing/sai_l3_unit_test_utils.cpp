@@ -38,6 +38,7 @@ extern "C" {
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "sainexthopgroupextensions.h"
 }
 
 #define SAI_TEST_MAX_GROUP_NEXT_HOP_MEMBER_ATTR (SAI_NEXT_HOP_GROUP_MEMBER_ATTR_END - SAI_NEXT_HOP_GROUP_MEMBER_ATTR_START)
@@ -2146,6 +2147,13 @@ sai_status_t saiL3Test::sai_test_nh_group_create (
                         attr_index, nh_count);
                 break;
 
+            case SAI_NEXT_HOP_GROUP_ATTR_EXTENSIONS_OVERLAY:
+
+                p_attr->id = attr_id;
+                p_attr->value.booldata = va_arg (varg_list, unsigned int);
+                attr_index++;
+                break;
+
             default:
                 p_attr->value.u64 = va_arg (varg_list, unsigned int);
                 printf ("Attr Index: %d, Set unknown Attr Id: %d to value: %ld.\n",
@@ -2168,10 +2176,13 @@ sai_status_t saiL3Test::sai_test_nh_group_create (
         printf ("SAI Next Hop Group Creation success, Group Id: 0x%" PRIx64 ".\n",
                 (*p_group_id));
 
-        sai_rc = sai_test_add_nh_to_group (*p_group_id, nh_count, p_nh_list);
+        if(p_nh_list != NULL){
 
-        if (sai_rc != SAI_STATUS_SUCCESS) {
-            p_sai_nh_grp_api_tbl->remove_next_hop_group (*p_group_id);
+            sai_rc = sai_test_add_nh_to_group (*p_group_id, nh_count, p_nh_list);
+
+            if (sai_rc != SAI_STATUS_SUCCESS) {
+                p_sai_nh_grp_api_tbl->remove_next_hop_group (*p_group_id);
+            }
         }
     }
 
@@ -2182,9 +2193,9 @@ sai_status_t saiL3Test::sai_test_nh_group_create (
 
 sai_status_t saiL3Test::sai_test_nh_group_remove (sai_object_id_t group_id)
 {
-    sai_status_t     sai_rc;
-    sai_object_id_t *nh_list;
-    unsigned int     nh_count;
+    sai_status_t     sai_rc   = SAI_STATUS_SUCCESS;
+    sai_object_id_t *nh_list  = NULL;
+    unsigned int     nh_count = 0;
 
     sai_rc = sai_test_get_nh_count (group_id, &nh_count);
 
@@ -2194,29 +2205,32 @@ sai_status_t saiL3Test::sai_test_nh_group_remove (sai_object_id_t group_id)
         return sai_rc;
     }
 
-    nh_list = (sai_object_id_t *) calloc (nh_count, sizeof (sai_object_id_t));
+    if(nh_count != 0) {
 
-    if (nh_list == NULL) {
-        return SAI_STATUS_NO_MEMORY;
-    }
+        nh_list = (sai_object_id_t *) calloc (nh_count, sizeof (sai_object_id_t));
 
-    sai_rc = sai_test_get_nh_list (group_id, &nh_count, nh_list);
+        if (nh_list == NULL) {
+            return SAI_STATUS_NO_MEMORY;
+        }
 
-    if (sai_rc != SAI_STATUS_SUCCESS) {
-        printf ("Failed to get the NH list. Group ID: 0x%" PRIx64 ", Err: %d.",
-                group_id, sai_rc);
-        free (nh_list);
-        return sai_rc;
-    }
+        sai_rc = sai_test_get_nh_list (group_id, &nh_count, nh_list);
 
-    sai_rc = sai_test_remove_nh_from_group (group_id, nh_count, nh_list);
+        if (sai_rc != SAI_STATUS_SUCCESS) {
+            printf ("Failed to get the NH list. Group ID: 0x%" PRIx64 ", Err: %d.",
+                    group_id, sai_rc);
+            free (nh_list);
+            return sai_rc;
+        }
 
-    if (sai_rc != SAI_STATUS_SUCCESS) {
-        printf ("SAI Next Hop Group Member Remove failed with error: %d. "
-                "Group Id: 0x%" PRIx64 "\n", sai_rc, group_id);
+        sai_rc = sai_test_remove_nh_from_group (group_id, nh_count, nh_list);
 
-        free (nh_list);
-        return sai_rc;
+        if (sai_rc != SAI_STATUS_SUCCESS) {
+            printf ("SAI Next Hop Group Member Remove failed with error: %d. "
+                    "Group Id: 0x%" PRIx64 "\n", sai_rc, group_id);
+
+            free (nh_list);
+            return sai_rc;
+        }
     }
 
     sai_rc = p_sai_nh_grp_api_tbl->remove_next_hop_group (group_id);
@@ -2712,6 +2726,72 @@ sai_status_t saiL3Test::sai_test_get_nh_list (sai_object_id_t  group_id,
     return rc;
 }
 
+void saiL3Test::sai_test_l3_switch_attributes_get(void)
+{
+    sai_attribute_t attr;
+    int count = 0;
+    sai_status_t sai_rc = SAI_STATUS_SUCCESS;
+
+    memset (&attr, 0, sizeof (attr));
+
+    attr.id = SAI_SWITCH_ATTR_AVAILABLE_IPV4_ROUTE_ENTRY;
+    sai_rc = p_sai_switch_api_tbl->get_switch_attribute(switch_id,1,&attr);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    count = attr.value.u32;
+    printf ("Available IPv4 Route entries is %d.\r\n", count);
+
+    attr.id = SAI_SWITCH_ATTR_AVAILABLE_IPV6_ROUTE_ENTRY;
+    sai_rc = saiL3Test::switch_api_tbl_get()->get_switch_attribute(switch_id,1,&attr);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    count = attr.value.u32;
+    printf ("Available IPv6 Route entries is %d.\r\n", count);
+
+    attr.id = SAI_SWITCH_ATTR_AVAILABLE_IPV4_NEXTHOP_ENTRY;
+    sai_rc = saiL3Test::switch_api_tbl_get()->get_switch_attribute(switch_id,1,&attr);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    count = attr.value.u32;
+    printf ("Available IPv4 NextHop entries is %d.\r\n", count);
+
+    attr.id = SAI_SWITCH_ATTR_AVAILABLE_IPV6_NEXTHOP_ENTRY;
+    sai_rc = saiL3Test::switch_api_tbl_get()->get_switch_attribute(switch_id,1,&attr);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    count = attr.value.u32;
+    printf ("Available IPv6 NextHop entries is %d.\r\n", count);
+
+    attr.id = SAI_SWITCH_ATTR_AVAILABLE_IPV4_NEIGHBOR_ENTRY;
+    sai_rc = saiL3Test::switch_api_tbl_get()->get_switch_attribute(switch_id,1,&attr);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    count = attr.value.u32;
+    printf ("Available IPv4 Neighbor entries is %d.\r\n", count);
+
+    attr.id = SAI_SWITCH_ATTR_AVAILABLE_IPV6_NEIGHBOR_ENTRY;
+    sai_rc = saiL3Test::switch_api_tbl_get()->get_switch_attribute(switch_id,1,&attr);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    count = attr.value.u32;
+    printf ("Available IPv6 Neighbor entries is %d.\r\n", count);
+
+    attr.id = SAI_SWITCH_ATTR_AVAILABLE_NEXT_HOP_GROUP_ENTRY;
+    sai_rc = saiL3Test::switch_api_tbl_get()->get_switch_attribute(switch_id,1,&attr);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    count = attr.value.u32;
+    printf ("Available ECMP Grp entries is %d.\r\n", count);
+}
+
+uint32_t saiL3Test::sai_test_fdb_switch_attributes_get(void)
+{
+    sai_attribute_t attr;
+    sai_status_t sai_rc = SAI_STATUS_SUCCESS;
+    uint32_t fdb_count = 0;
+
+    memset (&attr, 0, sizeof (attr));
+    attr.id = SAI_SWITCH_ATTR_AVAILABLE_FDB_ENTRY;
+    sai_rc = saiL3Test::switch_api_tbl_get()->get_switch_attribute(switch_id,1,&attr);
+    EXPECT_EQ (SAI_STATUS_SUCCESS, sai_rc);
+    fdb_count = attr.value.u32;
+    printf ("Available FDB entries Ct is %d.\r\n", fdb_count);
+
+    return fdb_count;
+}
 
 /*
  * Helper function to create an FDB entry.

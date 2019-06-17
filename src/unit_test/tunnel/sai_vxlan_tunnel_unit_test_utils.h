@@ -253,4 +253,5 @@ sai_object_id_t sai_get_port_id_from_port_info(unsigned port_idx);
 sai_status_t sai_set_flex_port_configuration(unsigned int port,
                                              sai_port_breakout_mode_type_t breakout_mode,
                                              uint32_t speed);
+void sai_test_vxlan_flood_packet_on_vxlan_l3mc_index(sai_object_id_t bridgeId, sai_object_id_t l2mcIndex);
 #endif
